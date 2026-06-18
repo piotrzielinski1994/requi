@@ -3,12 +3,12 @@
 **Spec:** docs/features/20260618193518-bootstrap/spec.md
 **Created:** 2026-06-18
 **Estimated Effort:** ~0.5-1 day
-**Status:** Draft
+**Status:** Implemented (verified; awaiting user validation before commit)
 
 ## 1. Overview
 
 Create a runnable empty desktop app: Tauri 2 shell + Vite/React 19/TS frontend, wired
-with TanStack Router/Query/Table/Form, react-hotkeys-hook keybindings, and shadcn/ui +
+with TanStack Router/Query/Table/Form, `@tanstack/react-hotkeys` keybindings, and shadcn/ui +
 Tailwind v4. Each TanStack lib proven with a minimal demo. No product features.
 
 ## 2. Task Breakdown
