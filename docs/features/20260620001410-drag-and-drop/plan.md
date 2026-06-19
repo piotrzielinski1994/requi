@@ -1,7 +1,31 @@
 # Plan: Drag-and-Drop (sidebar tree + request tabs)
 
 **Spec:** [spec.md](spec.md)
-**Status:** Draft - awaiting approval.
+**Status:** COMPLETE - all 13 ACs verified by a fresh verifier subagent (twice; once after a
+fix pass). All gates green: 290 frontend tests, typecheck clean, lint 0 errors, build OK,
+`cargo test` green.
+
+## AC traceability (final)
+
+| AC | Proving test |
+| -- | ------------ |
+| AC-001 | tab-reorder-context: `should set openRequestIds to the given permutation if reorderRequests is called` |
+| AC-002 | tab-reorder-context: `should keep the same active tab if reorderRequests moves the active tab`; `should not open or close any tab if reorderRequests is called` |
+| AC-003 | tab-reorder-context: `should call onTabsChange with the reordered ids if reorderRequests is called` |
+| AC-004 | tab-reorder-context: `should keep the Settings tab rendered and out of openRequestIds if request tabs are reordered` |
+| AC-005 | move: `should move a request into a folder at the given index if reparented`; move-node-context: `should reparent a root request into a folder if moveNode targets that folder` |
+| AC-006 | move: `should move a folder with its whole subtree intact if reparented into another folder` |
+| AC-007 | move: `should put the second child first…`; `should evaluate the index after removal…`; `should clamp an out-of-range index…` |
+| AC-008 | move: `should return the original tree unchanged if a folder is dropped into itself`; `…into its own descendant`; move-node-context: `should not change the tree or call onTreeChange if the move is illegal` |
+| AC-009 | tree-drop-indicator: `should render a drop line if the indicator points before this row`; `should highlight a folder row if the indicator points inside it`; (+ no-indicator / wrong-row negatives) |
+| AC-010 | in-memory-fs: `should round-trip a serialized tree if written then read back`; `should persist a reparented request if a move is serialized and written` |
+| AC-011 | disk-format-order: `should preserve a deliberately non-alphabetical sibling order through serialize then deserialize`; `should sort siblings by ascending order…`; `should fall back to folders-first-then-name…`; `should emit a manifest with schemaVersion 2` |
+| AC-012 | move-node-context: `should keep a reparented request open and active…`; `should keep a folder expanded…`; `should keep the current selection…` |
+| AC-013 | move-node-context: `should keep the in-memory move and log the failure if onTreeChange rejects the move` |
+
+Supporting pure-layer coverage: `tree-locate` (dropTarget projection incl. same-parent
+off-by-one fix, locateNode, findNode), `reconcile` (planReconcile write/remove diff +
+emptyDirsAfterRemoval ordering/survival).
 
 ## 0. Shape of the work
 
@@ -177,3 +201,5 @@ context-render tests (mirror `new-request-context.test.tsx` / `body-override-con
 | 2026-06-20 | Node ids stay stable through a move (no path-based id remap) | `resolveConfig` + all runtime lookups treat id as an opaque key (tree walked structurally); path-shaped id is only a deserialize convention. Stable ids => open tabs/selection/expansion survive a move for free. serialize regenerates disk paths from structure |
 | 2026-06-20 | Ship tabs (A) before sidebar (B) | A is small/in-memory/already-persisted and proves the dnd-kit integration; B is the large half (tree mutation + brand-new disk write + schema change). Independent subsystems, sequential delivery |
 | 2026-06-20 | Hard logic in pure fns (`moveNode`, `planReconcile`, `order` sort), dnd-kit as thin glue | jsdom can't simulate drag gestures; pure fns are fully testable and keep the DnD layer trivial. Matches the project's port/adapter + pure-`resolveConfig` style |
+| 2026-06-20 | `dropTarget` takes the dragId and compensates for `moveNode`'s post-removal index (subtract 1 on a same-parent downward drag) | Verifier caught a latent off-by-one: the indicator showed slot N but the node landed at N+1 when dragged down within a folder, because `moveNode` evaluates the index after removing the dragged node. Fixing it in the pure `dropTarget` keeps the glue dumb and the fix unit-tested |
+| 2026-06-20 | Extract `emptyDirsAfterRemoval`/`parentDir` into the pure `reconcile.ts` (out of the Tauri adapter) | Verifier flagged it had zero coverage (it lived only in the jsdom-untestable `tauri-fs.ts`). Moving it to a pure module made the deepest-first ordering + surviving-file logic unit-testable; the Tauri adapter just imports it |
