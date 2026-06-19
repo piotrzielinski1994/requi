@@ -35,6 +35,13 @@ describe("SHORTCUT_ACTIONS new actions", () => {
     expect(action!.defaultHotkey).toBe("Mod+O");
   });
 
+  it("should register close-all-requests with the Mod+Shift+W default", () => {
+    const action = findAction("close-all-requests");
+
+    expect(action).toBeDefined();
+    expect(action!.defaultHotkey).toBe("Mod+Shift+W");
+  });
+
   // AC-007 — behavior
   it("should give each new action a non-empty name and description", () => {
     const ids: ShortcutActionId[] = [

@@ -91,6 +91,48 @@ describe("close-request bug fix (Mod+W with settings active)", () => {
   });
 });
 
+describe("close-all-requests (Mod+Shift+W)", () => {
+  it("should close every open request tab if Mod+Shift+W fires", async () => {
+    const user = userEvent.setup();
+    renderShell("req-profile");
+    await screen.findByRole("region", { name: /console/i });
+
+    await openSecondTab(user);
+    const tablist = screen.getByRole("tablist", { name: /open requests/i });
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "DELETE session" }),
+    );
+    expect(within(tablist).getAllByRole("tab")).toHaveLength(3);
+
+    await user.keyboard("{Control>}{Shift>}w{/Shift}{/Control}");
+
+    await waitFor(() => {
+      expect(within(tablist).queryAllByRole("tab")).toHaveLength(0);
+    });
+  });
+
+  it("should also close the settings tab if Mod+Shift+W fires while settings is active", async () => {
+    const user = userEvent.setup();
+    renderShell("req-profile");
+    await screen.findByRole("region", { name: /console/i });
+
+    await openSecondTab(user);
+    await user.keyboard("{Control>}{Shift>}s{/Shift}{/Control}");
+    await screen.findByRole("heading", { name: /keyboard shortcuts/i });
+
+    await user.keyboard("{Control>}{Shift>}w{/Shift}{/Control}");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: /keyboard shortcuts/i }),
+      ).not.toBeInTheDocument();
+    });
+    const tablist = screen.getByRole("tablist", { name: /open requests/i });
+    expect(within(tablist).queryAllByRole("tab")).toHaveLength(0);
+  });
+});
+
 describe("toggle-sidebar (Mod+B)", () => {
   // AC-003, TC-003 — behavior
   it("should hide the sidebar tree if Mod+B fires while it is visible and show it again on a second press", async () => {
