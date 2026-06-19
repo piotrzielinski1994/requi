@@ -58,7 +58,7 @@ describe("findNode", () => {
 describe("dropTarget", () => {
   // behavior: inside a folder appends to its children
   it("should target the end of a folder's children if position is inside", () => {
-    expect(dropTarget(tree, "f1", "inside")).toEqual({
+    expect(dropTarget(tree, "r1", "f1", "inside")).toEqual({
       parentId: "f1",
       index: 2,
     });
@@ -66,27 +66,48 @@ describe("dropTarget", () => {
 
   // behavior: inside a request is illegal
   it("should return null if position is inside a request", () => {
-    expect(dropTarget(tree, "r1", "inside")).toBeNull();
+    expect(dropTarget(tree, "f1", "r1", "inside")).toBeNull();
   });
 
-  // behavior: before a node targets its own index in its parent
-  it("should target the node's index if position is before", () => {
-    expect(dropTarget(tree, "c2", "before")).toEqual({
+  // behavior: before a node (dragged from another parent) targets its index
+  it("should target the node's index if position is before from another parent", () => {
+    expect(dropTarget(tree, "r1", "c2", "before")).toEqual({
       parentId: "f1",
       index: 1,
     });
   });
 
-  // behavior: after a node targets index + 1
-  it("should target index plus one if position is after", () => {
-    expect(dropTarget(tree, "c1", "after")).toEqual({
+  // behavior: after a node (dragged from another parent) targets index + 1
+  it("should target index plus one if position is after from another parent", () => {
+    expect(dropTarget(tree, "r1", "c1", "after")).toEqual({
       parentId: "f1",
       index: 1,
+    });
+  });
+
+  // behavior: same-parent down-drag compensates for the post-removal shift
+  it("should drop one slot lower if dragging a node down past a later sibling", () => {
+    // Drag c1 (index 0) to AFTER c2 (index 1) within f1. Pre-removal "after c2"
+    // = index 2, but after removing c1 the siblings are [c2], so the post-
+    // removal index must be 1 to land c1 at the end: [c2, c1].
+    expect(dropTarget(tree, "c1", "c2", "after")).toEqual({
+      parentId: "f1",
+      index: 1,
+    });
+  });
+
+  // behavior: same-parent up-drag keeps the raw index
+  it("should keep the raw index if dragging a node up before an earlier sibling", () => {
+    // Drag c2 (index 1) to BEFORE c1 (index 0) -> index 0, no shift (dragged
+    // node sat after the drop point).
+    expect(dropTarget(tree, "c2", "c1", "before")).toEqual({
+      parentId: "f1",
+      index: 0,
     });
   });
 
   // behavior
   it("should return null if the over node is unknown", () => {
-    expect(dropTarget(tree, "ghost", "before")).toBeNull();
+    expect(dropTarget(tree, "r1", "ghost", "before")).toBeNull();
   });
 });

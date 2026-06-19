@@ -1,7 +1,11 @@
 import { mkdir, readDir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
 import type { FileMap } from "@/lib/workspace/disk-format";
 import type { ReadResult, WorkspaceFs, WriteResult } from "@/lib/workspace/fs";
-import { planReconcile } from "@/lib/workspace/reconcile";
+import {
+  emptyDirsAfterRemoval,
+  parentDir,
+  planReconcile,
+} from "@/lib/workspace/reconcile";
 
 const MANAGED_FILE =
   /(?:^|\/)folder\.json$|\.req\.json$|^requi\.workspace\.json$/;
@@ -23,33 +27,6 @@ async function collect(
       files[relPath] = await readTextFile(absPath);
     }
   }
-}
-
-function parentDir(relPath: string): string | null {
-  const slash = relPath.lastIndexOf("/");
-  return slash === -1 ? null : relPath.slice(0, slash);
-}
-
-function emptyDirsAfterRemoval(next: FileMap, removed: string[]): string[] {
-  const survivingDirs = new Set<string>();
-  for (const path of Object.keys(next)) {
-    let dir = parentDir(path);
-    while (dir !== null) {
-      survivingDirs.add(dir);
-      dir = parentDir(dir);
-    }
-  }
-  const candidates = new Set<string>();
-  for (const path of removed) {
-    let dir = parentDir(path);
-    while (dir !== null) {
-      candidates.add(dir);
-      dir = parentDir(dir);
-    }
-  }
-  return [...candidates]
-    .filter((dir) => !survivingDirs.has(dir))
-    .sort((a, b) => b.length - a.length);
 }
 
 export function createTauriWorkspaceFs(): WorkspaceFs {

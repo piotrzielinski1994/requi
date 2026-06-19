@@ -17,7 +17,7 @@ import {
   TreeDndProvider,
   type DropIndicator,
 } from "@/components/workspace/tree-dnd";
-import { findNode, dropTarget } from "@/lib/workspace/tree-locate";
+import { findNode, dropTarget, locateNode } from "@/lib/workspace/tree-locate";
 
 function projectPosition(
   event: DragOverEvent,
@@ -73,8 +73,12 @@ export function SidebarTree() {
     if (!current || current.overId === dragId) {
       return;
     }
-    const target = dropTarget(tree, current.overId, current.position);
+    const target = dropTarget(tree, dragId, current.overId, current.position);
     if (!target) {
+      return;
+    }
+    const from = locateNode(tree, dragId);
+    if (from && from.parentId === target.parentId && from.index === target.index) {
       return;
     }
     moveNode(dragId, target);

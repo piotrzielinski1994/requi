@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import { planReconcile } from "@/lib/workspace/reconcile";
+import {
+  emptyDirsAfterRemoval,
+  planReconcile,
+} from "@/lib/workspace/reconcile";
 import type { FileMap } from "@/lib/workspace/disk-format";
 
 describe("planReconcile write set", () => {
@@ -114,5 +117,37 @@ describe("planReconcile remove set", () => {
       "dst/src/folder.json": '{"name":"Src","order":0}',
       "dst/src/get.req.json": '{"name":"Get","order":0}',
     });
+  });
+});
+
+describe("emptyDirsAfterRemoval", () => {
+  // behavior: a dir whose only files were removed is reported, deepest-first
+  it("should report a dir as empty if all its files were removed", () => {
+    const next: FileMap = { "requi.workspace.json": "{}" };
+    const removed = ["src/nested/get.req.json", "src/nested/folder.json"];
+
+    const result = emptyDirsAfterRemoval(next, removed);
+
+    expect(result).toEqual(["src/nested", "src"]);
+  });
+
+  // behavior: a dir that still has a surviving file is NOT reported
+  it("should not report a dir as empty if a file still lives in it", () => {
+    const next: FileMap = { "src/stay.req.json": "{}" };
+    const removed = ["src/gone.req.json"];
+
+    const result = emptyDirsAfterRemoval(next, removed);
+
+    expect(result).toEqual([]);
+  });
+
+  // behavior: a surviving deeper file keeps the whole ancestor chain
+  it("should keep ancestor dirs alive if a surviving file is nested deeper", () => {
+    const next: FileMap = { "src/sub/stay.req.json": "{}" };
+    const removed = ["src/sub/gone.req.json", "src/top.req.json"];
+
+    const result = emptyDirsAfterRemoval(next, removed);
+
+    expect(result).toEqual([]);
   });
 });

@@ -17,3 +17,31 @@ export function planReconcile(current: FileMap, next: FileMap): ReconcilePlan {
   );
   return { write, remove };
 }
+
+export function parentDir(relPath: string): string | null {
+  const slash = relPath.lastIndexOf("/");
+  return slash === -1 ? null : relPath.slice(0, slash);
+}
+
+function ancestorDirs(relPath: string): string[] {
+  const dirs: string[] = [];
+  let dir = parentDir(relPath);
+  while (dir !== null) {
+    dirs.push(dir);
+    dir = parentDir(dir);
+  }
+  return dirs;
+}
+
+export function emptyDirsAfterRemoval(
+  next: FileMap,
+  removed: string[],
+): string[] {
+  const surviving = new Set(
+    Object.keys(next).flatMap((path) => ancestorDirs(path)),
+  );
+  const candidates = new Set(removed.flatMap((path) => ancestorDirs(path)));
+  return [...candidates]
+    .filter((dir) => !surviving.has(dir))
+    .sort((a, b) => b.length - a.length);
+}
