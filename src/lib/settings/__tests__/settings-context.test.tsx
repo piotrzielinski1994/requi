@@ -1,0 +1,156 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { SettingsProvider, useSettings } from "@/lib/settings/settings-context";
+import { createInMemorySettingsStore } from "@/lib/settings/in-memory-store";
+import {
+  DEFAULT_SETTINGS,
+  type PanelLayout,
+  type Settings,
+  type SettingsStore,
+} from "@/lib/settings/settings";
+
+// Tiny consumer that renders settings values into the DOM so we assert on
+// observable behavior, not on the context object shape directly.
+function SettingsProbe({ saveOnClick }: { saveOnClick?: PanelLayout }) {
+  const { settings, saveLayout } = useSettings();
+
+  return (
+    <div>
+      <span data-testid="console-hidden">{String(settings.consoleHidden)}</span>
+      <span data-testid="workspace-layout">
+        {JSON.stringify(settings.layouts.workspace ?? null)}
+      </span>
+      <button
+        type="button"
+        onClick={() =>
+          saveLayout("workspace", saveOnClick ?? { sidebar: 35, content: 65 })
+        }
+      >
+        save layout
+      </button>
+    </div>
+  );
+}
+
+describe("SettingsProvider", () => {
+  // AC-004 — behavior
+  it("should expose DEFAULT_SETTINGS to children if the store is empty", async () => {
+    const store = createInMemorySettingsStore();
+
+    render(
+      <SettingsProvider store={store}>
+        <SettingsProbe />
+      </SettingsProvider>,
+    );
+
+    expect(await screen.findByTestId("console-hidden")).toHaveTextContent(
+      String(DEFAULT_SETTINGS.consoleHidden),
+    );
+    expect(screen.getByTestId("workspace-layout")).toHaveTextContent("null");
+  });
+
+  // AC-004 — behavior
+  it("should expose seeded settings to children if the store has them", async () => {
+    const seeded: Settings = {
+      version: 1,
+      layouts: { workspace: { sidebar: 22, content: 78 } },
+      consoleHidden: true,
+    };
+    const store = createInMemorySettingsStore(seeded);
+
+    render(
+      <SettingsProvider store={store}>
+        <SettingsProbe />
+      </SettingsProvider>,
+    );
+
+    expect(await screen.findByTestId("console-hidden")).toHaveTextContent(
+      "true",
+    );
+    expect(screen.getByTestId("workspace-layout")).toHaveTextContent(
+      JSON.stringify({ sidebar: 22, content: 78 }),
+    );
+  });
+
+  // AC-002 — behavior
+  it("should update settings.layouts.workspace if saveLayout is called", async () => {
+    const user = userEvent.setup();
+    const store = createInMemorySettingsStore();
+
+    render(
+      <SettingsProvider store={store}>
+        <SettingsProbe saveOnClick={{ sidebar: 45, content: 55 }} />
+      </SettingsProvider>,
+    );
+
+    // Wait for the async load to render children before interacting.
+    await screen.findByTestId("workspace-layout");
+
+    await user.click(screen.getByRole("button", { name: /save layout/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-layout")).toHaveTextContent(
+        JSON.stringify({ sidebar: 45, content: 55 }),
+      );
+    });
+  });
+
+  // AC-002, AC-006 — side-effect-contract
+  it("should persist via store.save if saveLayout is called", async () => {
+    const user = userEvent.setup();
+    const inner = createInMemorySettingsStore();
+    const saveSpy = vi.fn(inner.save);
+    const store: SettingsStore = { load: inner.load, save: saveSpy };
+
+    render(
+      <SettingsProvider store={store}>
+        <SettingsProbe saveOnClick={{ sidebar: 45, content: 55 }} />
+      </SettingsProvider>,
+    );
+
+    await screen.findByTestId("workspace-layout");
+
+    await user.click(screen.getByRole("button", { name: /save layout/i }));
+
+    await waitFor(() => {
+      expect(saveSpy).toHaveBeenCalledTimes(1);
+    });
+    const persisted = saveSpy.mock.calls[0][0];
+    expect(persisted.layouts.workspace).toEqual({ sidebar: 45, content: 55 });
+  });
+
+  // TC-005, AC-002, AC-006 — side-effect-contract
+  it("should round-trip a saved layout through the store to a fresh provider", async () => {
+    const user = userEvent.setup();
+    const store = createInMemorySettingsStore();
+
+    const first = render(
+      <SettingsProvider store={store}>
+        <SettingsProbe saveOnClick={{ sidebar: 33, content: 67 }} />
+      </SettingsProvider>,
+    );
+
+    await screen.findByTestId("workspace-layout");
+    await user.click(screen.getByRole("button", { name: /save layout/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-layout")).toHaveTextContent(
+        JSON.stringify({ sidebar: 33, content: 67 }),
+      );
+    });
+
+    first.unmount();
+
+    // A fresh provider over the same store must see the persisted layout.
+    render(
+      <SettingsProvider store={store}>
+        <SettingsProbe />
+      </SettingsProvider>,
+    );
+
+    expect(await screen.findByTestId("workspace-layout")).toHaveTextContent(
+      JSON.stringify({ sidebar: 33, content: 67 }),
+    );
+  });
+});

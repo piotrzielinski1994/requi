@@ -41,7 +41,12 @@ Rust backend tests: `cd src-tauri && cargo test`.
 
 > The home route renders the MVP workspace layout (sidebar collection tree, request
 > tabs, URL bar, request/response panes, console) wired to mock data only - no real
-> HTTP, persistence, or editing yet.
+> HTTP or request editing yet.
+>
+> Per-installation UI settings (panel split sizes + whether the console is hidden) do
+> persist: they are saved to a `settings.json` in the OS app-config dir via the Tauri
+> Store plugin and restored on launch. In `npm run dev` (browser, no native shell) there
+> is no Tauri host, so settings fall back to defaults and saving is a no-op.
 
 ## Repo layout
 
@@ -56,6 +61,7 @@ src/
     workspace/          MVP workspace layout: sidebar tree, tabs, panes, console (mock data)
     ui/                 shadcn primitives
   lib/                  tauri.ts (typed invoke wrappers), utils.ts (cn)
+    settings/           per-installation settings: model + port, Tauri-store + in-memory adapters, provider
   index.css             Tailwind v4 + theme tokens
   test/setup.ts         Vitest + Testing Library setup
 src-tauri/              Rust desktop shell (greet command, tauri.conf.json)
