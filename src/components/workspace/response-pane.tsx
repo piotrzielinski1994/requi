@@ -3,11 +3,10 @@ import { Input } from "@/components/ui/input";
 import { KeyValueTable } from "@/components/workspace/key-value-table";
 import { PANE_TABS_LIST, PANE_TABS_TRIGGER } from "@/components/workspace/pane-tabs";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { RequestNode } from "@/components/workspace/mock-data";
+import type { RequestResponse } from "@/components/workspace/mock-data";
 
-function ResponseTabs({ request }: { request: RequestNode }) {
+function ResponseTabs({ response }: { response: RequestResponse }) {
   const { activeResponseTab, setResponseTab } = useWorkspace();
-  const { response } = request;
 
   return (
     <Tabs
@@ -58,7 +57,7 @@ function ResponseTabs({ request }: { request: RequestNode }) {
 export function ResponsePane() {
   const { activeRequest } = useWorkspace();
 
-  if (!activeRequest) {
+  if (!activeRequest?.response) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         No response
@@ -66,5 +65,5 @@ export function ResponsePane() {
     );
   }
 
-  return <ResponseTabs request={activeRequest} />;
+  return <ResponseTabs response={activeRequest.response} />;
 }

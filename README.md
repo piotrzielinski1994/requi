@@ -39,14 +39,31 @@ npm install
 
 Rust backend tests: `cd src-tauri && cargo test`.
 
-> The home route renders the MVP workspace layout (sidebar collection tree, request
-> tabs, URL bar, request/response panes, console) wired to mock data only - no real
-> HTTP or request editing yet.
+> The home route renders the workspace layout (sidebar collection tree, request tabs,
+> URL bar, request/response panes, console). No real HTTP or in-app request editing yet.
 >
-> Per-installation UI settings (panel split sizes + whether the console is hidden) do
-> persist: they are saved to a `settings.json` in the OS app-config dir via the Tauri
-> Store plugin and restored on launch. In `npm run dev` (browser, no native shell) there
-> is no Tauri host, so settings fall back to defaults and saving is a no-op.
+> Per-installation UI settings (panel split sizes + whether the console is hidden) persist
+> to a `settings.json` in the OS app-config dir via the Tauri Store plugin, restored on
+> launch. In `npm run dev` (browser, no native shell) there is no Tauri host, so settings
+> fall back to defaults and saving is a no-op.
+>
+> A **workspace** is a folder on disk holding the collection tree + config. Point the app
+> at one by hand-editing `workspacePath` in that same `settings.json`; it loads on launch
+> (empty state if unset/invalid). Folders/requests carry an inheritable config (variables,
+> headers, params, auth, scripts, timeout); a request resolves it by inheriting from its
+> folder chain (child overrides parent) - the request pane's read-only **Effective** tab
+> shows each resolved value and where it came from. Config is authored by hand-editing the
+> workspace files (no in-app editing or save yet). On-disk format:
+>
+> ```
+> <workspace>/
+>   requi.workspace.json        manifest { schemaVersion, name }
+>   <folder>/folder.json        { name, config }
+>   <folder>/<request>.req.json { name, method, url, body, config }
+> ```
+>
+> Workspace files (including auth tokens / variable values) are stored **plaintext** -
+> treat a workspace folder as sensitive and gitignore secrets accordingly.
 
 ## Repo layout
 
@@ -58,10 +75,11 @@ src/
   app/providers.tsx     QueryClientProvider + HotkeysProvider
   routes/               __root (layout + 404), index (workspace home), settings
   components/
-    workspace/          MVP workspace layout: sidebar tree, tabs, panes, console (mock data)
+    workspace/          workspace layout: sidebar tree, tabs, panes, console, loader
     ui/                 shadcn primitives
   lib/                  tauri.ts (typed invoke wrappers), utils.ts (cn)
     settings/           per-installation settings: model + port, Tauri-store + in-memory adapters, provider
+    workspace/          workspace domain: model, resolveConfig, disk-format (serialize/deserialize), fs port + adapters
   index.css             Tailwind v4 + theme tokens
   test/setup.ts         Vitest + Testing Library setup
 src-tauri/              Rust desktop shell (greet command, tauri.conf.json)

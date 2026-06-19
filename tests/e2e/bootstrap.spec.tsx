@@ -26,23 +26,19 @@ function renderApp(initialPath = "/") {
 }
 
 describe("app routing", () => {
-  // AC-001, AC-002 — behavior
-  it("should render the workspace at the home route on launch", async () => {
+  // behavior: with no workspacePath configured (no Tauri host under jsdom),
+  // the home route shows the empty state instead of auto-loading a tree.
+  it("should render the workspace empty state at the home route on launch", async () => {
     renderApp("/");
 
-    expect(
-      await screen.findByRole("tree", { name: /collection/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("region", { name: /console/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/no workspace/i)).toBeInTheDocument();
   });
 
-  // AC-015 — behavior: the bootstrap demo shell is gone
+  // behavior: the bootstrap demo shell is gone
   it("should not render the bootstrap demo nav at the home route", async () => {
     renderApp("/");
 
-    await screen.findByRole("tree", { name: /collection/i });
+    await screen.findByText(/no workspace/i);
     expect(screen.queryByRole("link", { name: /^home$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

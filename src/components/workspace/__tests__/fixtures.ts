@@ -17,14 +17,18 @@ export const tokenRequest: RequestNode = {
   name: "token",
   method: "POST",
   url: "{{baseUrl}}/oauth/token",
-  params: [
-    { key: "grant_type", value: "client_credentials" },
-    { key: "scope", value: "read" },
-  ],
-  headers: [{ key: "Content-Type", value: "application/x-www-form-urlencoded" }],
-  auth: { type: "bearer", token: "tok-abc-123" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    params: [
+      { key: "grant_type", value: "client_credentials" },
+      { key: "scope", value: "read" },
+    ],
+    headers: [
+      { key: "Content-Type", value: "application/x-www-form-urlencoded" },
+    ],
+    auth: { type: "bearer", token: "tok-abc-123" },
+    scripts: { pre: "", post: "" },
+  },
   response: {
     status: 200,
     timeMs: 142,
@@ -43,11 +47,13 @@ export const profileRequest: RequestNode = {
   name: "profile",
   method: "GET",
   url: "{{baseUrl}}/users/:id",
-  params: [{ key: "expand", value: "roles" }],
-  headers: [{ key: "Accept", value: "application/json" }],
-  auth: { type: "basic", username: "admin", password: "s3cret" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    params: [{ key: "expand", value: "roles" }],
+    headers: [{ key: "Accept", value: "application/json" }],
+    auth: { type: "basic", username: "admin", password: "s3cret" },
+    scripts: { pre: "", post: "" },
+  },
   response: {
     status: 201,
     timeMs: 88,
@@ -63,11 +69,11 @@ export const sessionRequest: RequestNode = {
   name: "session",
   method: "DELETE",
   url: "{{baseUrl}}/session",
-  params: [],
-  headers: [],
-  auth: { type: "none" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    auth: { type: "none" },
+    scripts: { pre: "", post: "" },
+  },
   response: {
     status: 204,
     timeMs: 30,
@@ -81,6 +87,7 @@ const oauthFolder: FolderNode = {
   kind: "folder",
   id: "folder-oauth",
   name: "OAuth",
+  config: {},
   children: [tokenRequest],
 };
 
@@ -88,6 +95,7 @@ const authFolder: FolderNode = {
   kind: "folder",
   id: "folder-auth",
   name: "Auth",
+  config: { variables: { baseUrl: "https://api.example.com" } },
   children: [oauthFolder],
 };
 
@@ -95,6 +103,7 @@ const usersFolder: FolderNode = {
   kind: "folder",
   id: "folder-users",
   name: "Users",
+  config: {},
   children: [profileRequest],
 };
 
