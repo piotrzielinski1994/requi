@@ -28,6 +28,7 @@ Don't add: one-off task context, debugging notes, things obvious from the code i
   2. Write `spec.md` first. Get it approved before planning.
   3. Write `plan.md` from the approved spec.
   4. Log any significant choices made while specing to [docs/adr.md](docs/adr.md).
+- Branch naming: when working on a feature (not a quick fix), the branch name must match the feature's folder name under `docs/features/` exactly (e.g. folder `20260618223203-layout` -> branch `20260618223203-layout`). Quick fixes are exempt.
 
 ## Architectural Decisions
 
