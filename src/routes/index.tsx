@@ -1,28 +1,18 @@
 import { useState } from "react";
 import { createRoute } from "@tanstack/react-router";
-import { WorkspaceProvider } from "@/components/workspace/workspace-context";
-import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
+import { WorkspaceLoader } from "@/components/workspace/workspace-loader";
 import { SettingsProvider } from "@/lib/settings/settings-context";
 import { createTauriSettingsStore } from "@/lib/settings/tauri-store";
+import { createTauriWorkspaceFs } from "@/lib/workspace/tauri-fs";
 import { rootRoute } from "@/routes/__root";
 
 function HomePage() {
   const [settingsStore] = useState(createTauriSettingsStore);
+  const [workspaceFs] = useState(createTauriWorkspaceFs);
 
   return (
     <SettingsProvider store={settingsStore}>
-      <WorkspaceProvider
-        initialExpandedIds={[
-          "f-auth",
-          "f-oauth",
-          "f-tokens",
-          "f-users",
-          "f-billing",
-        ]}
-        initialActiveRequestId="r-token"
-      >
-        <WorkspaceLayout />
-      </WorkspaceProvider>
+      <WorkspaceLoader fs={workspaceFs} />
     </SettingsProvider>
   );
 }

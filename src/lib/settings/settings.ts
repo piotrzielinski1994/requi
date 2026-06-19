@@ -6,6 +6,7 @@ export type Settings = {
   version: 1;
   layouts: Partial<Record<PanelGroupKey, PanelLayout>>;
   consoleHidden: boolean;
+  workspacePath?: string;
 };
 
 export type SettingsStore = {
@@ -53,5 +54,9 @@ export function mergeSettings(defaults: Settings, partial: unknown): Settings {
       typeof partial.consoleHidden === "boolean"
         ? partial.consoleHidden
         : defaults.consoleHidden,
+    workspacePath:
+      typeof partial.workspacePath === "string"
+        ? partial.workspacePath
+        : defaults.workspacePath,
   };
 }

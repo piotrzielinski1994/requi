@@ -1,42 +1,16 @@
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type {
+  HttpMethod,
+  KeyValue,
+  Auth,
+  ScriptConfig,
+  ConfigScope,
+  RequestResponse,
+  RequestNode,
+  FolderNode,
+  TreeNode,
+} from "@/lib/workspace/model";
 
-export type KeyValue = { key: string; value: string };
-
-export type Auth =
-  | { type: "none" }
-  | { type: "bearer"; token: string }
-  | { type: "basic"; username: string; password: string };
-
-export type RequestResponse = {
-  status: number;
-  timeMs: number;
-  sizeBytes: number;
-  body: string;
-  headers: KeyValue[];
-};
-
-export type RequestNode = {
-  kind: "request";
-  id: string;
-  name: string;
-  method: HttpMethod;
-  url: string;
-  params: KeyValue[];
-  headers: KeyValue[];
-  auth: Auth;
-  body: string;
-  scripts: { pre: string; post: string };
-  response: RequestResponse;
-};
-
-export type FolderNode = {
-  kind: "folder";
-  id: string;
-  name: string;
-  children: TreeNode[];
-};
-
-export type TreeNode = FolderNode | RequestNode;
+import type { RequestNode, TreeNode } from "@/lib/workspace/model";
 
 const tokenRequest: RequestNode = {
   kind: "request",
@@ -44,16 +18,18 @@ const tokenRequest: RequestNode = {
   name: "/oauth/token",
   method: "POST",
   url: "{{baseUrl}}/oauth/token",
-  params: [
-    { key: "grant_type", value: "client_credentials" },
-    { key: "scope", value: "read write" },
-  ],
-  headers: [
-    { key: "Content-Type", value: "application/x-www-form-urlencoded" },
-  ],
-  auth: { type: "bearer", token: "ey.mock.token" },
   body: '{\n  "grant_type": "client_credentials"\n}',
-  scripts: { pre: "// pre-request script", post: "// post-response script" },
+  config: {
+    params: [
+      { key: "grant_type", value: "client_credentials" },
+      { key: "scope", value: "read write" },
+    ],
+    headers: [
+      { key: "Content-Type", value: "application/x-www-form-urlencoded" },
+    ],
+    auth: { type: "bearer", token: "ey.mock.token" },
+    scripts: { pre: "// pre-request script", post: "// post-response script" },
+  },
   response: {
     status: 200,
     timeMs: 142,
@@ -72,11 +48,11 @@ const refreshRequest: RequestNode = {
   name: "/oauth/refresh",
   method: "GET",
   url: "{{baseUrl}}/oauth/refresh",
-  params: [],
-  headers: [{ key: "Accept", value: "application/json" }],
-  auth: { type: "bearer", token: "ey.refresh.token" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    headers: [{ key: "Accept", value: "application/json" }],
+    auth: { type: "bearer", token: "ey.refresh.token" },
+  },
   response: {
     status: 200,
     timeMs: 96,
@@ -92,11 +68,11 @@ const userinfoRequest: RequestNode = {
   name: "/oauth/userinfo",
   method: "GET",
   url: "{{baseUrl}}/oauth/userinfo",
-  params: [],
-  headers: [{ key: "Authorization", value: "Bearer ey.mock.token" }],
-  auth: { type: "bearer", token: "ey.mock.token" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    headers: [{ key: "Authorization", value: "Bearer ey.mock.token" }],
+    auth: { type: "bearer", token: "ey.mock.token" },
+  },
   response: {
     status: 200,
     timeMs: 71,
@@ -112,11 +88,12 @@ const getUserRequest: RequestNode = {
   name: "/users/:id",
   method: "GET",
   url: "{{baseUrl}}/users/:id",
-  params: [{ key: "expand", value: "roles" }],
-  headers: [{ key: "Accept", value: "application/json" }],
-  auth: { type: "basic", username: "admin", password: "s3cret" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    params: [{ key: "expand", value: "roles" }],
+    headers: [{ key: "Accept", value: "application/json" }],
+    auth: { type: "basic", username: "admin", password: "s3cret" },
+  },
   response: {
     status: 200,
     timeMs: 64,
@@ -132,11 +109,12 @@ const invoicesRequest: RequestNode = {
   name: "/billing/invoices",
   method: "GET",
   url: "{{baseUrl}}/billing/invoices",
-  params: [{ key: "status", value: "open" }],
-  headers: [{ key: "Accept", value: "application/json" }],
-  auth: { type: "bearer", token: "ey.billing.token" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    params: [{ key: "status", value: "open" }],
+    headers: [{ key: "Accept", value: "application/json" }],
+    auth: { type: "bearer", token: "ey.billing.token" },
+  },
   response: {
     status: 200,
     timeMs: 188,
@@ -152,11 +130,11 @@ const chargeRequest: RequestNode = {
   name: "/billing/charge",
   method: "POST",
   url: "{{baseUrl}}/billing/charge",
-  params: [],
-  headers: [{ key: "Content-Type", value: "application/json" }],
-  auth: { type: "bearer", token: "ey.billing.token" },
   body: '{\n  "amount": 1999,\n  "currency": "eur"\n}',
-  scripts: { pre: "", post: "" },
+  config: {
+    headers: [{ key: "Content-Type", value: "application/json" }],
+    auth: { type: "bearer", token: "ey.billing.token" },
+  },
   response: {
     status: 201,
     timeMs: 233,
@@ -172,11 +150,10 @@ const healthRequest: RequestNode = {
   name: "/health",
   method: "GET",
   url: "{{baseUrl}}/health",
-  params: [],
-  headers: [],
-  auth: { type: "none" },
   body: "",
-  scripts: { pre: "", post: "" },
+  config: {
+    auth: { type: "none" },
+  },
   response: {
     status: 200,
     timeMs: 12,
@@ -191,16 +168,19 @@ export const mockTree: TreeNode[] = [
     kind: "folder",
     id: "f-auth",
     name: "auth",
+    config: { variables: { baseUrl: "https://api.example.com" } },
     children: [
       {
         kind: "folder",
         id: "f-oauth",
         name: "oauth",
+        config: {},
         children: [
           {
             kind: "folder",
             id: "f-tokens",
             name: "tokens",
+            config: {},
             children: [tokenRequest, refreshRequest],
           },
           userinfoRequest,
@@ -212,12 +192,14 @@ export const mockTree: TreeNode[] = [
     kind: "folder",
     id: "f-users",
     name: "users",
+    config: {},
     children: [getUserRequest],
   },
   {
     kind: "folder",
     id: "f-billing",
     name: "billing",
+    config: {},
     children: [invoicesRequest, chargeRequest],
   },
   healthRequest,

@@ -11,8 +11,18 @@ import {
   type RequestNode,
   type TreeNode,
 } from "@/components/workspace/mock-data";
+import {
+  resolveConfig,
+  type EffectiveConfig,
+} from "@/lib/workspace/resolve";
 
-export type RequestTab = "auth" | "headers" | "params" | "body" | "script";
+export type RequestTab =
+  | "auth"
+  | "headers"
+  | "params"
+  | "body"
+  | "script"
+  | "effective";
 export type ResponseTab = "response" | "headers";
 
 type WorkspaceContextValue = {
@@ -26,6 +36,7 @@ type WorkspaceContextValue = {
   activeResponseTab: ResponseTab;
   requestsById: Map<string, RequestNode>;
   activeRequest: RequestNode | null;
+  effectiveConfig: EffectiveConfig | null;
   toggleFolder: (id: string) => void;
   selectNode: (id: string) => void;
   setActiveRequest: (id: string) => void;
@@ -129,6 +140,10 @@ export function WorkspaceProvider({
       activeRequest:
         activeRequestId !== null
           ? (requestsById.get(activeRequestId) ?? null)
+          : null,
+      effectiveConfig:
+        activeRequestId !== null
+          ? resolveConfig(tree, activeRequestId)
           : null,
       toggleFolder: (id) =>
         setExpandedFolderIds((current) => toggleInSet(current, id)),
