@@ -55,25 +55,33 @@ export function parseEmptyZoneId(id: string): string | null {
     : null;
 }
 
-// Pointer-relative drop projection. For a folder the middle 50% reparents
-// (drop inside), so even an empty/collapsed folder has a large, reliable
-// target; the top/bottom 25% reorder around it. A request splits 50/50.
+// Pointer-relative drop projection.
+// - Request row: top half = before, bottom half = after (reorder).
+// - Expanded folder row: only a thin top strip = before (reorder above it);
+//   the rest = inside. "After an open folder" visually IS its children area,
+//   so the whole non-top row reliably reparents - no narrow middle band.
+// - Collapsed folder row: top/bottom quarters reorder, middle 50% = inside.
 export function projectDropPosition({
   pointerY,
   rectTop,
   rectHeight,
   isOverFolder,
+  isExpandedFolder = false,
 }: {
   pointerY: number;
   rectTop: number;
   rectHeight: number;
   isOverFolder: boolean;
+  isExpandedFolder?: boolean;
 }): DropPosition {
   if (rectHeight <= 0) {
     return "before";
   }
   const fraction = (pointerY - rectTop) / rectHeight;
   if (isOverFolder) {
+    if (isExpandedFolder) {
+      return fraction < 0.3 ? "before" : "inside";
+    }
     if (fraction < 0.25) {
       return "before";
     }

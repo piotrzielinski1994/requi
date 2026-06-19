@@ -38,6 +38,7 @@ function pointerY(event: DragOverEvent): number | null {
 function projectPosition(
   event: DragOverEvent,
   isOverFolder: boolean,
+  isExpandedFolder: boolean,
 ): DropIndicator["position"] {
   const overRect = event.over?.rect;
   const y = pointerY(event);
@@ -49,6 +50,7 @@ function projectPosition(
     rectTop: overRect.top,
     rectHeight: overRect.height,
     isOverFolder,
+    isExpandedFolder,
   });
 }
 
@@ -78,12 +80,13 @@ export function SidebarTree() {
     }
     const over = findNode(tree, overId);
     const isOverFolder = over?.kind === "folder";
-    const position = projectPosition(event, Boolean(isOverFolder));
     // Expand a hovered folder so its children (or the empty-drop zone) appear
-    // as drop targets - including when projecting "inside".
+    // as drop targets. A hovered folder is always (about to be) expanded, so
+    // project it with the expanded-folder geometry (whole row = inside).
     if (isOverFolder && !expandedFolderIds.has(overId)) {
       toggleFolder(overId);
     }
+    const position = projectPosition(event, Boolean(isOverFolder), isOverFolder);
     setIndicator({ overId, position });
   };
 

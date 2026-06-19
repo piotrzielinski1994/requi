@@ -192,4 +192,28 @@ describe("projectDropPosition", () => {
       projectDropPosition({ pointerY: 50, rectTop: 50, rectHeight: 0, isOverFolder: true }),
     ).toBe("before");
   });
+
+  const overExpandedFolder = (pointerY: number) =>
+    projectDropPosition({
+      pointerY,
+      rectTop: 100,
+      rectHeight: 20,
+      isOverFolder: true,
+      isExpandedFolder: true,
+    });
+
+  // behavior: an EXPANDED folder (with children) reparents across almost its
+  // whole row - "after an open folder" visually is its children area = inside.
+  // This is the "can drop into oauth but not auth" fix.
+  it("should drop inside an expanded folder across most of its row", () => {
+    expect(overExpandedFolder(110)).toBe("inside"); // center
+    expect(overExpandedFolder(118)).toBe("inside"); // bottom 10% - was "after"
+    expect(overExpandedFolder(108)).toBe("inside"); // ~40% down
+  });
+
+  // behavior: only a thin top strip of an expanded folder reorders above it
+  it("should reorder above an expanded folder only near its top edge", () => {
+    expect(overExpandedFolder(102)).toBe("before"); // top 10%
+    expect(overExpandedFolder(116)).not.toBe("after"); // bottom is inside now
+  });
 });
