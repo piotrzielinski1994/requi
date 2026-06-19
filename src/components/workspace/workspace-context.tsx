@@ -45,6 +45,7 @@ type WorkspaceContextValue = {
   selectNode: (id: string) => void;
   setActiveRequest: (id: string) => void;
   closeRequest: (id: string) => void;
+  closeAllRequests: () => void;
   setRequestTab: (tab: RequestTab) => void;
   setResponseTab: (tab: ResponseTab) => void;
   openSettings: () => void;
@@ -184,6 +185,14 @@ export function WorkspaceProvider({
       setDrafts((current) => current.filter((draft) => draft.id !== id));
     };
 
+    const closeAllRequests = () => {
+      setOpenRequestIds([]);
+      setActiveRequestId(null);
+      setDrafts([]);
+      setIsSettingsOpen(false);
+      setIsSettingsActive(false);
+    };
+
     const newRequest = () => {
       draftCounter.current += 1;
       const id = `draft-${draftCounter.current}`;
@@ -230,6 +239,7 @@ export function WorkspaceProvider({
         setActiveRequestId(id);
       },
       closeRequest,
+      closeAllRequests,
       setRequestTab: setActiveRequestTab,
       setResponseTab: setActiveResponseTab,
       openSettings: () => {

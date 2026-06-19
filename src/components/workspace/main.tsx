@@ -29,6 +29,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     isSettingsActive,
     setActiveRequest,
     closeRequest,
+    closeAllRequests,
     openSettings,
     closeSettings,
     newRequest,
@@ -77,6 +78,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
         closeRequest(activeRequestId);
       }
     },
+    "close-all-requests": () => closeAllRequests(),
     "new-request": () => newRequest(),
     "open-workspace": openWorkspace,
   };

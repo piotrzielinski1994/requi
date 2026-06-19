@@ -14,6 +14,7 @@ function TabsProbe() {
     activeRequestId,
     selectNode,
     closeRequest,
+    closeAllRequests,
     newRequest,
   } = useWorkspace();
 
@@ -26,6 +27,9 @@ function TabsProbe() {
       </button>
       <button type="button" onClick={() => closeRequest("req-profile")}>
         close profile
+      </button>
+      <button type="button" onClick={() => closeAllRequests()}>
+        close all
       </button>
       <button type="button" onClick={() => newRequest()}>
         new draft
@@ -112,6 +116,47 @@ describe("WorkspaceProvider open-tab persistence", () => {
       expect(ids).toEqual(["req-profile"]);
       expect(active).toBeNull();
     });
+  });
+
+  it("should clear all open tabs and persist an empty list when closeAllRequests is called", async () => {
+    const user = userEvent.setup();
+    const onTabsChange = vi.fn();
+
+    render(
+      <WorkspaceProvider
+        tree={fixtureTree}
+        initialOpenRequestIds={["req-profile", "req-token", "req-session"]}
+        onTabsChange={onTabsChange}
+      >
+        <TabsProbe />
+      </WorkspaceProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /close all/i }));
+
+    expect(screen.getByTestId("open-ids")).toHaveTextContent("");
+    expect(screen.getByTestId("active-id")).toHaveTextContent("none");
+    await waitFor(() => {
+      expect(onTabsChange).toHaveBeenLastCalledWith([], null);
+    });
+  });
+
+  it("should also drop in-memory drafts when closeAllRequests is called", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <WorkspaceProvider tree={fixtureTree} initialOpenRequestIds={["req-profile"]}>
+        <TabsProbe />
+      </WorkspaceProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /new draft/i }));
+    expect(screen.getByTestId("open-ids")).not.toHaveTextContent("");
+
+    await user.click(screen.getByRole("button", { name: /close all/i }));
+
+    expect(screen.getByTestId("open-ids")).toHaveTextContent("");
+    expect(screen.getByTestId("active-id")).toHaveTextContent("none");
   });
 
   it("should persist the remaining ids when a tab is closed", async () => {

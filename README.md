@@ -53,8 +53,9 @@ Rust backend tests: `cd src-tauri && cargo test`.
 >
 > Every wired action has a configurable keyboard shortcut (TanStack Hotkeys). Defaults:
 > open settings `Mod+Shift+S`, close settings `Esc`, toggle console `Mod+J`, toggle sidebar
-> `Mod+B`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, new request
-> `Mod+T`, open workspace `Mod+O`, command palette `Mod+K` (`Mod` = Cmd on macOS, Ctrl
+> `Mod+B`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, close all
+> request tabs `Mod+Shift+W`, new request `Mod+T`, open workspace `Mod+O`, command palette
+> `Mod+K` (`Mod` = Cmd on macOS, Ctrl
 > elsewhere). The command palette is an overlay listing every wired action with its shortcut;
 > type to filter, arrow to move, Enter (or click) to run, Esc to close. Settings open as a
 > tab inside the workspace (sidebar + console stay visible); `Mod+Shift+S` opens/activates it,
