@@ -1,0 +1,118 @@
+import { describe, it, expect } from "vitest";
+
+import { planReconcile } from "@/lib/workspace/reconcile";
+import type { FileMap } from "@/lib/workspace/disk-format";
+
+describe("planReconcile write set", () => {
+  // behavior - new file lands in write
+  it("should include a key in write if it is new in next", () => {
+    const current: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2,"name":"W"}',
+    };
+    const next: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2,"name":"W"}',
+      "a.req.json": '{"name":"A"}',
+    };
+
+    const result = planReconcile(current, next);
+
+    expect(result.write).toEqual({ "a.req.json": '{"name":"A"}' });
+  });
+
+  // behavior - changed content lands in write
+  it("should include a key in write if its value differs from current", () => {
+    const current: FileMap = { "a.req.json": '{"name":"A"}' };
+    const next: FileMap = { "a.req.json": '{"name":"A-renamed"}' };
+
+    const result = planReconcile(current, next);
+
+    expect(result.write).toEqual({ "a.req.json": '{"name":"A-renamed"}' });
+  });
+
+  // behavior - unchanged content is not rewritten
+  it("should not include a key in write if its value is identical to current", () => {
+    const current: FileMap = {
+      "a.req.json": '{"name":"A"}',
+      "b.req.json": '{"name":"B"}',
+    };
+    const next: FileMap = {
+      "a.req.json": '{"name":"A"}',
+      "b.req.json": '{"name":"B-changed"}',
+    };
+
+    const result = planReconcile(current, next);
+
+    expect(result.write).toEqual({ "b.req.json": '{"name":"B-changed"}' });
+    expect(result.write["a.req.json"]).toBeUndefined();
+  });
+});
+
+describe("planReconcile remove set", () => {
+  // behavior - managed orphan is removed
+  it("should include a managed key in remove if it exists in current but not next", () => {
+    const current: FileMap = {
+      "gone.req.json": '{"name":"Gone"}',
+      "stay.req.json": '{"name":"Stay"}',
+    };
+    const next: FileMap = { "stay.req.json": '{"name":"Stay"}' };
+
+    const result = planReconcile(current, next);
+
+    expect(result.remove).toEqual(["gone.req.json"]);
+  });
+
+  // behavior - folder.json and manifest count as managed
+  it("should include orphan folder.json and manifest keys in remove if managed", () => {
+    const current: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2}',
+      "users/folder.json": '{"name":"Users"}',
+    };
+    const next: FileMap = {};
+
+    const result = planReconcile(current, next);
+
+    expect(result.remove.sort()).toEqual(
+      ["requi.workspace.json", "users/folder.json"].sort(),
+    );
+  });
+
+  // behavior - unmanaged orphan is never removed
+  it("should not include an unmanaged orphan in remove", () => {
+    const current: FileMap = {
+      "notes.txt": "scratch",
+      ".git/config": "[core]",
+      "gone.req.json": '{"name":"Gone"}',
+    };
+    const next: FileMap = {};
+
+    const result = planReconcile(current, next);
+
+    expect(result.remove).toEqual(["gone.req.json"]);
+    expect(result.remove).not.toContain("notes.txt");
+    expect(result.remove).not.toContain(".git/config");
+  });
+
+  // AC-006 / behavior - moved folder old paths are removed
+  it("should include the old managed paths in remove if a folder moved", () => {
+    const current: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2}',
+      "src/folder.json": '{"name":"Src","order":0}',
+      "src/get.req.json": '{"name":"Get","order":0}',
+    };
+    const next: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2}',
+      "dst/src/folder.json": '{"name":"Src","order":0}',
+      "dst/src/get.req.json": '{"name":"Get","order":0}',
+    };
+
+    const result = planReconcile(current, next);
+
+    expect(result.remove.sort()).toEqual(
+      ["src/folder.json", "src/get.req.json"].sort(),
+    );
+    expect(result.write).toEqual({
+      "dst/src/folder.json": '{"name":"Src","order":0}',
+      "dst/src/get.req.json": '{"name":"Get","order":0}',
+    });
+  });
+});
