@@ -22,6 +22,7 @@ import {
   dropTarget,
   locateNode,
   projectDropPosition,
+  parseEmptyZoneId,
 } from "@/lib/workspace/tree-locate";
 
 function pointerY(event: DragOverEvent): number | null {
@@ -70,10 +71,17 @@ export function SidebarTree() {
       setIndicator(null);
       return;
     }
+    // The empty-folder drop zone always means "inside" - no projection needed.
+    if (parseEmptyZoneId(overId) !== null) {
+      setIndicator({ overId, position: "inside" });
+      return;
+    }
     const over = findNode(tree, overId);
     const isOverFolder = over?.kind === "folder";
     const position = projectPosition(event, Boolean(isOverFolder));
-    if (isOverFolder && position === "inside" && !expandedFolderIds.has(overId)) {
+    // Expand a hovered folder so its children (or the empty-drop zone) appear
+    // as drop targets - including when projecting "inside".
+    if (isOverFolder && !expandedFolderIds.has(overId)) {
       toggleFolder(overId);
     }
     setIndicator({ overId, position });

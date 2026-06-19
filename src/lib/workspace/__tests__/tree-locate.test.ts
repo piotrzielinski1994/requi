@@ -5,6 +5,8 @@ import {
   findNode,
   dropTarget,
   projectDropPosition,
+  emptyZoneId,
+  parseEmptyZoneId,
 } from "@/lib/workspace/tree-locate";
 import type { FolderNode, RequestNode, TreeNode } from "@/lib/workspace/model";
 
@@ -114,6 +116,40 @@ describe("dropTarget", () => {
   // behavior
   it("should return null if the over node is unknown", () => {
     expect(dropTarget(tree, "r1", "ghost", "before")).toBeNull();
+  });
+});
+
+describe("empty-zone id", () => {
+  // behavior: round-trips a folder id through the empty-zone id encoding
+  it("should round-trip a folder id through emptyZoneId/parseEmptyZoneId", () => {
+    const id = emptyZoneId("folder-x");
+    expect(id).not.toBe("folder-x");
+    expect(parseEmptyZoneId(id)).toBe("folder-x");
+  });
+
+  // behavior: a plain node id is not an empty-zone id
+  it("should return null if the id is not an empty-zone id", () => {
+    expect(parseEmptyZoneId("folder-x")).toBeNull();
+  });
+});
+
+describe("dropTarget empty-zone", () => {
+  const emptyTree: TreeNode[] = [folder("empty", []), request("r1")];
+
+  // behavior: dropping on an empty folder's zone targets inside that folder
+  it("should target inside the folder if the over id is its empty-zone id", () => {
+    expect(dropTarget(emptyTree, "r1", emptyZoneId("empty"), "inside")).toEqual({
+      parentId: "empty",
+      index: 0,
+    });
+  });
+
+  // behavior: an empty-zone id for a non-folder / missing id is rejected
+  it("should return null if the empty-zone id does not map to a folder", () => {
+    expect(dropTarget(emptyTree, "r1", emptyZoneId("r1"), "inside")).toBeNull();
+    expect(
+      dropTarget(emptyTree, "r1", emptyZoneId("ghost"), "inside"),
+    ).toBeNull();
   });
 });
 

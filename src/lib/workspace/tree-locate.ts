@@ -40,6 +40,21 @@ export function findNode(nodes: TreeNode[], id: string): TreeNode | null {
 
 export type DropPosition = "before" | "after" | "inside";
 
+// An empty folder has no child rows to drop near, so during a drag it renders
+// a dedicated child-area drop zone with this id. Hovering it always means
+// "drop inside the folder", giving a large, reliable target.
+const EMPTY_ZONE_PREFIX = "empty-zone:";
+
+export function emptyZoneId(folderId: string): string {
+  return `${EMPTY_ZONE_PREFIX}${folderId}`;
+}
+
+export function parseEmptyZoneId(id: string): string | null {
+  return id.startsWith(EMPTY_ZONE_PREFIX)
+    ? id.slice(EMPTY_ZONE_PREFIX.length)
+    : null;
+}
+
 // Pointer-relative drop projection. For a folder the middle 50% reparents
 // (drop inside), so even an empty/collapsed folder has a large, reliable
 // target; the top/bottom 25% reorder around it. A request splits 50/50.
@@ -76,6 +91,14 @@ export function dropTarget(
   overId: string,
   position: DropPosition,
 ): MoveTarget | null {
+  const emptyZoneFolderId = parseEmptyZoneId(overId);
+  if (emptyZoneFolderId !== null) {
+    const folder = findNode(tree, emptyZoneFolderId);
+    if (!folder || folder.kind !== "folder") {
+      return null;
+    }
+    return { parentId: emptyZoneFolderId, index: folder.children.length };
+  }
   if (position === "inside") {
     const over = findNode(tree, overId);
     if (!over || over.kind !== "folder") {

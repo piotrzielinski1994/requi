@@ -66,3 +66,54 @@ describe("tree drop indicator (AC-009)", () => {
     expect(row.className).not.toMatch(/ring/);
   });
 });
+
+describe("empty-folder drop zone", () => {
+  const emptyFolder: TreeNode = {
+    kind: "folder",
+    id: "folder-empty",
+    name: "Empty",
+    config: {},
+    children: [],
+  };
+
+  function renderEmpty(activeId: string | null, indicator: DropIndicator | null) {
+    return render(
+      <WorkspaceProvider
+        tree={[emptyFolder]}
+        initialExpandedIds={["folder-empty"]}
+      >
+        <DndContext>
+          <TreeDndProvider value={{ activeId, indicator }}>
+            <ul>
+              <TreeRow node={emptyFolder} depth={0} />
+            </ul>
+          </TreeDndProvider>
+        </DndContext>
+      </WorkspaceProvider>,
+    );
+  }
+
+  // behavior: an expanded empty folder shows a drop zone while a drag is active
+  it("should render a drop zone in an expanded empty folder if a drag is active", () => {
+    renderEmpty("req-x", null);
+
+    expect(screen.getByTestId("empty-drop-zone")).toBeInTheDocument();
+  });
+
+  // behavior: no drag in progress -> no drop zone (no clutter at rest)
+  it("should not render a drop zone if no drag is active", () => {
+    renderEmpty(null, null);
+
+    expect(screen.queryByTestId("empty-drop-zone")).not.toBeInTheDocument();
+  });
+
+  // behavior: hovering the zone highlights it
+  it("should highlight the empty drop zone if the indicator points at it", () => {
+    renderEmpty("req-x", {
+      overId: "empty-zone:folder-empty",
+      position: "inside",
+    });
+
+    expect(screen.getByTestId("empty-drop-zone").className).toMatch(/ring/);
+  });
+});

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useTreeDnd } from "@/components/workspace/tree-dnd";
+import { emptyZoneId } from "@/lib/workspace/tree-locate";
 import type {
   FolderNode,
   RequestNode,
@@ -35,6 +36,7 @@ function useRowDnd(id: string) {
 
 function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
   const { expandedFolderIds, selectedNodeId, selectNode } = useWorkspace();
+  const { activeId } = useTreeDnd();
   const {
     attributes,
     listeners,
@@ -46,6 +48,8 @@ function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
   } = useRowDnd(node.id);
   const isExpanded = expandedFolderIds.has(node.id);
   const Chevron = isExpanded ? ChevronDown : ChevronRight;
+  const isEmpty = node.children.length === 0;
+  const isDragActive = activeId !== null && activeId !== node.id;
 
   return (
     <li className="relative">
@@ -76,8 +80,41 @@ function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
           {node.children.map((child) => (
             <TreeRow key={child.id} node={child} depth={depth + 1} />
           ))}
+          {isEmpty && isDragActive ? (
+            <EmptyDropZone folderId={node.id} depth={depth + 1} />
+          ) : null}
         </ul>
       ) : null}
+    </li>
+  );
+}
+
+function EmptyDropZone({
+  folderId,
+  depth,
+}: {
+  folderId: string;
+  depth: number;
+}) {
+  const zoneId = emptyZoneId(folderId);
+  const { setNodeRef } = useDroppable({ id: zoneId });
+  const { indicator } = useTreeDnd();
+  const isOver = indicator?.overId === zoneId;
+
+  return (
+    <li>
+      <div
+        ref={setNodeRef}
+        aria-hidden="true"
+        data-testid="empty-drop-zone"
+        style={{ paddingLeft: `${depth * 14 + 10}px` }}
+        className={cn(
+          "py-1 pr-2 text-[12px] italic text-muted-foreground",
+          isOver && "ring-1 ring-inset ring-primary",
+        )}
+      >
+        Drop here
+      </div>
     </li>
   );
 }
