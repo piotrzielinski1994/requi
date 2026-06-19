@@ -29,10 +29,7 @@ export function createTauriSettingsStore(): SettingsStore {
 
   const save = async (settings: Settings): Promise<void> => {
     const { shortcuts, ...withoutShortcuts } = settings;
-    await persist(settingsStore, SETTINGS_KEY, {
-      ...withoutShortcuts,
-      shortcuts: {},
-    });
+    await persist(settingsStore, SETTINGS_KEY, withoutShortcuts);
     await persist(keymapStore, SHORTCUTS_KEY, shortcuts);
   };
 
@@ -42,7 +39,7 @@ export function createTauriSettingsStore(): SettingsStore {
 async function persist(
   store: LazyStore,
   key: string,
-  value: Settings | ShortcutOverrides,
+  value: Omit<Settings, "shortcuts"> | ShortcutOverrides,
 ): Promise<void> {
   await store
     .set(key, value)
