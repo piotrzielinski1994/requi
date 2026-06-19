@@ -44,6 +44,7 @@ type WorkspaceContextValue = {
   toggleFolder: (id: string) => void;
   selectNode: (id: string) => void;
   setActiveRequest: (id: string) => void;
+  reorderRequests: (nextIds: string[]) => void;
   closeRequest: (id: string) => void;
   closeAllRequests: () => void;
   setRequestBody: (id: string, body: string) => void;
@@ -265,6 +266,13 @@ export function WorkspaceProvider({
         setIsSettingsActive(false);
         setActiveRequestId(id);
       },
+      reorderRequests: (nextIds) =>
+        setOpenRequestIds((current) => {
+          const isPermutation =
+            nextIds.length === current.length &&
+            nextIds.every((id) => current.includes(id));
+          return isPermutation ? nextIds : current;
+        }),
       closeRequest,
       closeAllRequests,
       setRequestBody,
