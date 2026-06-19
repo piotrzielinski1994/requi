@@ -39,6 +39,10 @@ npm install
 
 Rust backend tests: `cd src-tauri && cargo test`.
 
+> The home route renders the MVP workspace layout (sidebar collection tree, request
+> tabs, URL bar, request/response panes, console) wired to mock data only - no real
+> HTTP, persistence, or editing yet.
+
 ## Repo layout
 
 ```
@@ -47,8 +51,10 @@ src/
   main.tsx              React entry: providers + RouterProvider
   router.tsx            Code-based TanStack Router assembly
   app/providers.tsx     QueryClientProvider + HotkeysProvider
-  routes/               __root (layout + 404), index (home), settings
-  components/           demo-table, demo-form, command-palette, ui/ (shadcn)
+  routes/               __root (layout + 404), index (workspace home), settings
+  components/
+    workspace/          MVP workspace layout: sidebar tree, tabs, panes, console (mock data)
+    ui/                 shadcn primitives
   lib/                  tauri.ts (typed invoke wrappers), utils.ts (cn)
   index.css             Tailwind v4 + theme tokens
   test/setup.ts         Vitest + Testing Library setup
@@ -56,7 +62,3 @@ src-tauri/              Rust desktop shell (greet command, tauri.conf.json)
 tests/e2e/              Behavior smoke tests
 docs/                   spec/plan per feature, ADR, learnings
 ```
-
-## Keybindings
-
-- `Mod+K` (`Cmd+K` macOS / `Ctrl+K` elsewhere) - toggle the command palette placeholder.

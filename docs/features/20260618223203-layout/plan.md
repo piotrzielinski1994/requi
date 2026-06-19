@@ -126,21 +126,29 @@ Per CLAUDE.md TDD: red-green-refactor on behavior. Panels have real interaction
 
 ## 8. Acceptance Verification
 
+Test files live in `src/components/workspace/__tests__/` and `tests/e2e/bootstrap.spec.tsx`.
+Verified by a fresh-context verifier subagent: all gates green, no hard blockers.
+
 | AC ID | Criterion | Test(s) | Status |
 |-------|-----------|---------|--------|
-| AC-001 | Layout at home route | TC-001 (manual/render) | Pending |
-| AC-002 | Full-window sidebar+content+console | TC-001 | Pending |
-| AC-003 | Tree with 3-deep nesting | tree render test | Pending |
-| AC-004 | Folder expand/collapse | TC-002 | Pending |
-| AC-005 | Request click selects + opens tab | TC-003 | Pending |
-| AC-006 | Folder click selects, no tab | sidebar selection test | Pending |
-| AC-007 | Content-header tabs + close + `+` | TC-005 | Pending |
-| AC-008 | URL bar method+url+inert Send | UrlBar test | Pending |
-| AC-009 | Request sub-tabs render panels | TC-004 | Pending |
-| AC-010 | Response sub-tabs + status | response-pane test | Pending |
-| AC-011 | Auth variants render | auth-panel tests (none/bearer/basic) | Pending |
-| AC-012 | Console strip | console render test | Pending |
-| AC-013 | Resizable splits | manual/smoke | Pending |
-| AC-014 | Shared UI state, no prop drilling | context-driven (arch) | Pending |
-| AC-015 | Demos + nav + palette removed | grep + render test | Pending |
-| AC-016 | lint + typecheck + test pass | manual | Pending |
+| AC-001 | Layout at home route | bootstrap.spec "render the workspace at the home route" | Pass |
+| AC-002 | Full-window sidebar+content+console | bootstrap.spec home route; workspace-layout "render the tree and console together" | Pass |
+| AC-003 | Tree with 3-deep nesting | sidebar-tree "nested three folders deep", "method badge" | Pass |
+| AC-004 | Folder expand/collapse | sidebar-tree "reveal/hide a folder's children" | Pass |
+| AC-005 | Request click selects + opens tab | sidebar-tree "select a request and open its tab" | Pass |
+| AC-006 | Folder click selects, no tab | sidebar-tree "not open a request tab when a folder is clicked" | Pass |
+| AC-007 | Content-header tabs + close + `+` | content-header: active, close, no-dup (E-3), reassign (E-4), null-on-last (E-4), New request | Pass |
+| AC-008 | URL bar method+url+inert Send | url-bar "method and url", "empty state" (E-1) | Pass |
+| AC-009 | Request sub-tabs render panels | request-pane "params by default and headers after click" | Pass |
+| AC-010 | Response sub-tabs + status | response-pane "status and time", "headers after click" | Pass |
+| AC-011 | Auth variants render | request-pane auth bearer/basic/none | Pass |
+| AC-012 | Console strip | console "render each log line" | Pass |
+| AC-013 | Resizable splits | manual/smoke (handles present; shadcn primitive owns drag) | Manual |
+| AC-014 | Shared UI state, no prop drilling | architectural - panels render under provider only | Pass (arch) |
+| AC-015 | Demos + nav + palette removed | bootstrap.spec "no bootstrap demo nav"; grep clean | Pass |
+| AC-016 | lint + typecheck + test pass | typecheck 0 err, lint 0 err, 26/26 tests, build ok | Pass |
+
+### Deviations from plan
+- Initial launch state: per spec §4 the home route now seeds `initialActiveRequestId="r-token"` and expands all root folders (added after verifier flagged the gap).
+- E-3 (no-duplicate tab) and E-4 (active-tab reassignment + null-on-last-close) tests were added post-verification; behavior was already correct but had been left unprotected.
+- `react-resizable-panels` v4 uses `orientation` not `direction` (shadcn template gotcha; see docs/learnings.md).

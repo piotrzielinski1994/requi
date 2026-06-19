@@ -1,0 +1,106 @@
+import type { RequestNode, FolderNode, TreeNode } from "@/components/workspace/mock-data";
+
+// Small, explicit fixture tree used by all workspace tests.
+// Shape mirrors spec section 4 (TreeNode/RequestNode/FolderNode discriminated unions).
+// IDs are stable so initialExpandedIds / initialActiveRequestId are deterministic.
+//
+//   v Auth
+//      v OAuth
+//         POST token        (bearer)   -> nested 3 folders deep
+//   > Users                            (collapsed sibling folder)
+//   GET profile             (basic)    (root request leaf)
+//   DELETE session          (none)     (root request leaf)
+
+export const tokenRequest: RequestNode = {
+  kind: "request",
+  id: "req-token",
+  name: "token",
+  method: "POST",
+  url: "{{baseUrl}}/oauth/token",
+  params: [
+    { key: "grant_type", value: "client_credentials" },
+    { key: "scope", value: "read" },
+  ],
+  headers: [{ key: "Content-Type", value: "application/x-www-form-urlencoded" }],
+  auth: { type: "bearer", token: "tok-abc-123" },
+  body: "",
+  scripts: { pre: "", post: "" },
+  response: {
+    status: 200,
+    timeMs: 142,
+    sizeBytes: 512,
+    body: '{ "access_token": "abc" }',
+    headers: [
+      { key: "X-Response-Header", value: "resp-value" },
+      { key: "Content-Type", value: "application/json" },
+    ],
+  },
+};
+
+export const profileRequest: RequestNode = {
+  kind: "request",
+  id: "req-profile",
+  name: "profile",
+  method: "GET",
+  url: "{{baseUrl}}/users/:id",
+  params: [{ key: "expand", value: "roles" }],
+  headers: [{ key: "Accept", value: "application/json" }],
+  auth: { type: "basic", username: "admin", password: "s3cret" },
+  body: "",
+  scripts: { pre: "", post: "" },
+  response: {
+    status: 201,
+    timeMs: 88,
+    sizeBytes: 256,
+    body: '{ "id": 1 }',
+    headers: [{ key: "X-Profile", value: "yes" }],
+  },
+};
+
+export const sessionRequest: RequestNode = {
+  kind: "request",
+  id: "req-session",
+  name: "session",
+  method: "DELETE",
+  url: "{{baseUrl}}/session",
+  params: [],
+  headers: [],
+  auth: { type: "none" },
+  body: "",
+  scripts: { pre: "", post: "" },
+  response: {
+    status: 204,
+    timeMs: 30,
+    sizeBytes: 0,
+    body: "",
+    headers: [],
+  },
+};
+
+const oauthFolder: FolderNode = {
+  kind: "folder",
+  id: "folder-oauth",
+  name: "OAuth",
+  children: [tokenRequest],
+};
+
+const authFolder: FolderNode = {
+  kind: "folder",
+  id: "folder-auth",
+  name: "Auth",
+  children: [oauthFolder],
+};
+
+const usersFolder: FolderNode = {
+  kind: "folder",
+  id: "folder-users",
+  name: "Users",
+  children: [profileRequest],
+};
+
+export const fixtureTree: TreeNode[] = [
+  authFolder,
+  usersFolder,
+  profileRequest,
+  sessionRequest,
+];
