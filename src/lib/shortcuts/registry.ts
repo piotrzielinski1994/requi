@@ -9,6 +9,7 @@ export type ShortcutActionId =
   | "close-all-requests"
   | "new-request"
   | "open-workspace"
+  | "send-request"
   | "open-command-palette";
 
 export type ShortcutAction = {
@@ -80,6 +81,12 @@ export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = [
     name: "Open workspace",
     description: "Pick a workspace folder to load.",
     defaultHotkey: "Mod+O",
+  },
+  {
+    id: "send-request",
+    name: "Send request",
+    description: "Send the active request and load its response.",
+    defaultHotkey: "Mod+Enter",
   },
   {
     id: "open-command-palette",

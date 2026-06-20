@@ -40,10 +40,19 @@ npm install
 Rust backend tests: `cd src-tauri && cargo test`.
 
 > The home route renders the workspace layout (sidebar collection tree, request tabs,
-> URL bar, request/response panes, console). No real HTTP yet. The request pane's **Body**
-> tab is a CodeMirror editor (JetBrains Darcula theme, JSON syntax highlighting, auto-closing
-> brackets, and inline JSON syntax linting - malformed JSON gets a red underline + gutter
-> marker); edits live in session memory only and are not yet written back to disk.
+> URL bar, request/response panes, console). The URL bar is editable (URL field + method
+> select); **Send** issues a real HTTP request through a Rust `send_http_request` command
+> (`reqwest`, rustls TLS) - the request's resolved config is applied (`{{var}}` substitution
+> in the URL + header/param values, query params merged into the URL, auth header, timeout,
+> and body for non-GET/DELETE methods). The response pane shows loading (`Sending…`), error
+> (the failure reason), or success (status/time/size + body + headers) per request; with no
+> send yet it falls back to the seeded response. The response **Filter** input narrows the
+> shown body by a JSONPath-ish path (`$.args.foo`, `$.headers[0]`); an empty path shows the
+> full body, a path that matches nothing (or a non-JSON body) shows "No match". URL/method
+> edits live in session memory only (like body edits) and are not written back to disk.
+> The request pane's **Body** tab is a CodeMirror editor (JetBrains Darcula theme, JSON
+> syntax highlighting, auto-closing brackets, and inline JSON syntax linting - malformed
+> JSON gets a red underline + gutter marker); edits live in session memory only too.
 >
 > Per-installation UI settings (panel split sizes, whether the console is hidden, and the
 > set of open request tabs + the active one) persist to a `settings.json` in the OS
@@ -57,8 +66,8 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > Every wired action has a configurable keyboard shortcut (TanStack Hotkeys). Defaults:
 > open settings `Mod+Shift+S`, close settings `Esc`, toggle console `Mod+J`, toggle sidebar
 > `Mod+B`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, close all
-> request tabs `Mod+Shift+W`, new request `Mod+T`, open workspace `Mod+O`, command palette
-> `Mod+K` (`Mod` = Cmd on macOS, Ctrl
+> request tabs `Mod+Shift+W`, new request `Mod+T`, open workspace `Mod+O`, send request
+> `Mod+Enter`, command palette `Mod+K` (`Mod` = Cmd on macOS, Ctrl
 > elsewhere). The command palette is an overlay listing every wired action with its shortcut;
 > type to filter, arrow to move, Enter (or click) to run, Esc to close. Settings open as a
 > tab inside the workspace (sidebar + console stay visible); `Mod+Shift+S` opens/activates it,
@@ -108,6 +117,7 @@ src/
     workspace/          workspace layout: sidebar tree, tabs, panes, console, loader
     ui/                 shadcn primitives
   lib/                  tauri.ts (typed invoke wrappers), utils.ts (cn)
+    http/               HTTP loop: buildHttpRequest, filterJson, HttpClient port + Tauri/fake adapters
     settings/           per-installation settings: model + port, Tauri-store + in-memory adapters, provider
     workspace/          workspace domain: model, resolveConfig, disk-format (serialize/deserialize), fs port + adapters
   index.css             Tailwind v4 + theme tokens

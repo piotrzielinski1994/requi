@@ -22,7 +22,7 @@ describe("UrlBar", () => {
     expect(within(bar).getByText("POST")).toBeInTheDocument();
 
     const urlBox = within(bar).getByRole("textbox", { name: /url/i });
-    expect(urlBox).toHaveTextContent("{{baseUrl}}/oauth/token");
+    expect(urlBox).toHaveValue("{{baseUrl}}/oauth/token");
 
     expect(
       within(bar).getByRole("button", { name: /send/i }),

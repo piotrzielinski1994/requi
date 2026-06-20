@@ -22,6 +22,7 @@ const ACTION_IDS: ShortcutActionId[] = [
   "close-all-requests",
   "new-request",
   "open-workspace",
+  "send-request",
   "open-command-palette",
 ];
 

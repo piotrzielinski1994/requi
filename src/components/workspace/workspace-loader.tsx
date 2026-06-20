@@ -5,6 +5,7 @@ import { useSettings } from "@/lib/settings/settings-context";
 import { deserialize, serialize } from "@/lib/workspace/disk-format";
 import type { WorkspaceFs } from "@/lib/workspace/fs";
 import type { FolderPicker } from "@/lib/workspace/folder-picker";
+import type { HttpClient } from "@/lib/http/model";
 import type { TreeNode } from "@/lib/workspace/model";
 
 type LoadState =
@@ -36,9 +37,11 @@ const EMPTY_CONSOLE_LINES = [
 export function WorkspaceLoader({
   fs,
   picker,
+  httpClient,
 }: {
   fs: WorkspaceFs;
   picker?: FolderPicker;
+  httpClient?: HttpClient;
 }) {
   const { settings, saveOpenTabs } = useSettings();
   const workspacePath = settings.workspacePath;
@@ -86,7 +89,11 @@ export function WorkspaceLoader({
 
   if (state.status === "empty") {
     return (
-      <WorkspaceProvider tree={[]} consoleLines={EMPTY_CONSOLE_LINES}>
+      <WorkspaceProvider
+        tree={[]}
+        consoleLines={EMPTY_CONSOLE_LINES}
+        httpClient={httpClient}
+      >
         <WorkspaceLayout picker={picker} />
       </WorkspaceProvider>
     );
@@ -103,6 +110,7 @@ export function WorkspaceLoader({
       onTreeChange={(tree) =>
         fs.writeWorkspace(workspacePath ?? "", serialize(tree, workspaceName))
       }
+      httpClient={httpClient}
     >
       <WorkspaceLayout picker={picker} />
     </WorkspaceProvider>
