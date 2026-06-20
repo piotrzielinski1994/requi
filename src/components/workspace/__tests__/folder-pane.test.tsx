@@ -1,0 +1,191 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { EditorView } from "@codemirror/view";
+
+import {
+  WorkspaceProvider,
+  useWorkspace,
+} from "@/components/workspace/workspace-context";
+import { Content } from "@/components/workspace/content";
+import { SettingsProvider } from "@/lib/settings/settings-context";
+import { createInMemorySettingsStore } from "@/lib/settings/in-memory-store";
+import { DEFAULT_SETTINGS } from "@/lib/settings/settings";
+import type { ConfigScope, TreeNode } from "@/lib/workspace/model";
+import { createFakeHttpClient } from "./fake-http-client";
+
+const FOLDER_CONFIG: ConfigScope = {
+  variables: { baseUrl: "https://api.example.com" },
+  headers: [{ key: "Accept", value: "application/json" }],
+  params: [{ key: "trace", value: "on" }],
+  auth: { type: "bearer", token: "folder-token" },
+  scripts: { pre: "// folder pre-request" },
+  environments: { local: { baseUrl: "http://localhost:8080" } },
+};
+
+const tree: TreeNode[] = [
+  {
+    kind: "folder",
+    id: "folder-1",
+    name: "Auth",
+    config: FOLDER_CONFIG,
+    children: [
+      {
+        kind: "request",
+        id: "req-1",
+        name: "Req",
+        method: "GET",
+        url: "https://api/get",
+        body: "",
+        config: {},
+      },
+    ],
+  },
+];
+
+function OpenFolder() {
+  const { openConfigEditor } = useWorkspace();
+  return (
+    <button type="button" onClick={() => openConfigEditor("folder-1")}>
+      open folder
+    </button>
+  );
+}
+
+function renderContent(onTreeChange = vi.fn().mockResolvedValue({ ok: true })) {
+  const store = createInMemorySettingsStore({ ...DEFAULT_SETTINGS });
+  return render(
+    <SettingsProvider store={store}>
+      <WorkspaceProvider
+        tree={tree}
+        httpClient={createFakeHttpClient()}
+        onTreeChange={onTreeChange}
+      >
+        <OpenFolder />
+        <Content />
+      </WorkspaceProvider>
+    </SettingsProvider>,
+  );
+}
+
+function liveDoc(): string {
+  const el = document.querySelector<HTMLElement>(".cm-editor");
+  if (!el) throw new Error(".cm-editor not found");
+  const view = EditorView.findFromDOM(el);
+  if (!view) throw new Error("live EditorView not found");
+  return view.state.doc.toString();
+}
+
+describe("FolderPane", () => {
+  // behavior: opening a folder shows a pane with the same sub-tabs as a request
+  it("should render Vars/Auth/Headers/Params/Script/Settings sub-tabs", async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+
+    const tablist = await screen.findByRole("tablist", {
+      name: /folder sections/i,
+    });
+    for (const name of ["Vars", "Auth", "Headers", "Params", "Script", "Settings"]) {
+      expect(within(tablist).getByRole("tab", { name })).toBeInTheDocument();
+    }
+  });
+
+  // behavior: a folder pane opens on the Vars sub-tab by default
+  it("should select the Vars sub-tab by default", async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+
+    const tablist = await screen.findByRole("tablist", {
+      name: /folder sections/i,
+    });
+    expect(within(tablist).getByRole("tab", { name: "Vars" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  // behavior: the Vars sub-tab lists the folder's variables
+  it("should show the folder variables in the Vars sub-tab", async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+
+    expect(await screen.findByText("baseUrl")).toBeInTheDocument();
+    expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
+  });
+
+  // behavior: the Headers sub-tab lists the folder's headers
+  it("should show the folder headers in the Headers sub-tab", async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    const tablist = await screen.findByRole("tablist", {
+      name: /folder sections/i,
+    });
+    await user.click(within(tablist).getByRole("tab", { name: "Headers" }));
+
+    expect(await screen.findByText("Accept")).toBeInTheDocument();
+  });
+
+  // behavior: the Settings sub-tab shows the folder config as editable JSON
+  it("should show the folder config as raw JSON in the Settings sub-tab", async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    const tablist = await screen.findByRole("tablist", {
+      name: /folder sections/i,
+    });
+    await user.click(within(tablist).getByRole("tab", { name: "Settings" }));
+
+    await waitFor(() => {
+      expect(document.querySelector(".cm-editor")).not.toBeNull();
+    });
+    expect(liveDoc()).toBe(JSON.stringify(FOLDER_CONFIG, null, 2));
+  });
+
+  // behavior: Save persists the folder config
+  it("should persist the folder config when Save is clicked", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn().mockResolvedValue({ ok: true });
+    renderContent(onTreeChange);
+
+    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    const tablist = await screen.findByRole("tablist", {
+      name: /folder sections/i,
+    });
+    await user.click(within(tablist).getByRole("tab", { name: "Settings" }));
+    await waitFor(() => {
+      expect(document.querySelector(".cm-editor")).not.toBeNull();
+    });
+
+    const view = EditorView.findFromDOM(
+      document.querySelector<HTMLElement>(".cm-editor")!,
+    )!;
+    view.dispatch({
+      changes: {
+        from: 0,
+        to: view.state.doc.length,
+        insert: JSON.stringify({ variables: { x: "1" } }),
+      },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /save/i })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(onTreeChange).toHaveBeenCalledTimes(1);
+    });
+    const next = onTreeChange.mock.calls[0][0] as TreeNode[];
+    expect(next.find((n) => n.id === "folder-1")?.config).toEqual({
+      variables: { x: "1" },
+    });
+  });
+});

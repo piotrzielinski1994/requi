@@ -19,5 +19,9 @@ export function createInMemoryWorkspaceFs(
       workspaces[rootPath] = files;
       return Promise.resolve({ ok: true });
     },
+    writeEnv: (rootPath, content): Promise<WriteResult> => {
+      workspaces[rootPath] = { ...(workspaces[rootPath] ?? {}), ".env": content };
+      return Promise.resolve({ ok: true });
+    },
   };
 }

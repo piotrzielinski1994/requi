@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
@@ -34,6 +34,24 @@ function useRowDnd(id: string) {
   };
 }
 
+function EditConfigButton({ id }: { id: string }) {
+  const { openConfigEditor } = useWorkspace();
+  return (
+    <button
+      type="button"
+      aria-label="Edit config"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        openConfigEditor(id);
+      }}
+      className="ml-auto shrink-0 rounded p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground"
+    >
+      <Pencil className="size-3" />
+    </button>
+  );
+}
+
 function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
   const { expandedFolderIds, selectedNodeId, selectNode } = useWorkspace();
   const { activeId } = useTreeDnd();
@@ -65,7 +83,7 @@ function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
         onClick={() => selectNode(node.id)}
         style={{ paddingLeft: `${depth * 14 + 6}px` }}
         className={cn(
-          "flex cursor-grab touch-none items-center gap-1 py-1 pr-2 text-[13px] hover:bg-accent active:cursor-grabbing",
+          "group flex cursor-pointer touch-none items-center gap-1 py-1 pr-2 text-[13px] hover:bg-accent",
           isDragging && "opacity-50",
           selectedNodeId === node.id && "bg-accent",
           dropInside && "ring-1 ring-inset ring-primary",
@@ -73,6 +91,7 @@ function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
       >
         <Chevron className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="truncate">{node.name}</span>
+        <EditConfigButton id={node.id} />
       </div>
       {dropAfter && <DropLine />}
       {isExpanded ? (
@@ -144,7 +163,7 @@ function RequestRow({ node, depth }: { node: RequestNode; depth: number }) {
         onClick={() => selectNode(node.id)}
         style={{ paddingLeft: `${depth * 14 + 10}px` }}
         className={cn(
-          "flex cursor-grab touch-none items-center gap-2 py-1 pr-2 text-[13px] hover:bg-accent active:cursor-grabbing",
+          "group flex cursor-pointer touch-none items-center gap-2 py-1 pr-2 text-[13px] hover:bg-accent",
           isDragging && "opacity-50",
           selectedNodeId === node.id && "bg-accent",
         )}
@@ -158,6 +177,7 @@ function RequestRow({ node, depth }: { node: RequestNode; depth: number }) {
           {node.method}
         </span>
         <span className="truncate">{node.name}</span>
+        <EditConfigButton id={node.id} />
       </div>
       {dropAfter && <DropLine />}
     </li>

@@ -2,13 +2,16 @@ import { useState } from "react";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { SettingsProvider } from "@/lib/settings/settings-context";
 import { createTauriSettingsStore } from "@/lib/settings/tauri-store";
+import { ToastProvider } from "@/components/ui/toast";
 
 function RootLayout() {
   const [settingsStore] = useState(createTauriSettingsStore);
 
   return (
     <SettingsProvider store={settingsStore}>
-      <Outlet />
+      <ToastProvider>
+        <Outlet />
+      </ToastProvider>
     </SettingsProvider>
   );
 }

@@ -10,6 +10,10 @@ import {
 const MANAGED_FILE =
   /(?:^|\/)folder\.json$|\.req\.json$|^requi\.workspace\.json$/;
 
+// Read-only inputs captured into the FileMap but NOT matched by MANAGED_FILE,
+// so reconcile never writes or removes them (e.g. the workspace-root `.env`).
+const READONLY_FILE = /^\.env$/;
+
 async function collect(
   absDir: string,
   relPrefix: string,
@@ -23,7 +27,10 @@ async function collect(
       await collect(absPath, `${relPath}/`, files);
       continue;
     }
-    if (entry.isFile && MANAGED_FILE.test(relPath)) {
+    if (
+      entry.isFile &&
+      (MANAGED_FILE.test(relPath) || READONLY_FILE.test(relPath))
+    ) {
       files[relPath] = await readTextFile(absPath);
     }
   }
@@ -65,6 +72,14 @@ export function createTauriWorkspaceFs(): WorkspaceFs {
         return { ok: true };
       } catch (error) {
         return { ok: false, error: `Failed to write workspace: ${error}` };
+      }
+    },
+    writeEnv: async (rootPath, content): Promise<WriteResult> => {
+      try {
+        await writeTextFile(`${rootPath}/.env`, content);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: `Failed to write .env: ${error}` };
       }
     },
   };

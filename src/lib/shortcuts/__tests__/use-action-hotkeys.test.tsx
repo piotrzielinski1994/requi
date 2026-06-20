@@ -82,8 +82,23 @@ describe("useActionHotkeys", () => {
     expect(toggle).toHaveBeenCalledTimes(1);
   });
 
-  // AC-008, TC-006 — behavior
-  it("should not run the handler if focus is in a text input", async () => {
+  // AC-008, TC-006 — behavior: bare-key bindings stay suppressed while typing.
+  it("should not run a bare-key handler if focus is in a text input", async () => {
+    const user = userEvent.setup();
+    const toggle = vi.fn();
+
+    renderHarness({ "toggle-console": toggle }, { "toggle-console": "p" });
+    await screen.findByTestId("ready");
+
+    await user.click(screen.getByTestId("text-input"));
+    await user.keyboard("p");
+
+    expect(toggle).not.toHaveBeenCalled();
+  });
+
+  // behavior: Mod/Ctrl combos DO fire while typing so the palette/save/send
+  // shortcuts keep working inside the URL field and the config editor.
+  it("should run a Mod-combo handler even if focus is in a text input", async () => {
     const user = userEvent.setup();
     const toggle = vi.fn();
 
@@ -93,7 +108,7 @@ describe("useActionHotkeys", () => {
     await user.click(screen.getByTestId("text-input"));
     await user.keyboard("{Control>}j{/Control}");
 
-    expect(toggle).not.toHaveBeenCalled();
+    expect(toggle).toHaveBeenCalledTimes(1);
   });
 
   // AC-002 — behavior

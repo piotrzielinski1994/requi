@@ -65,7 +65,7 @@ describe("close-request bug fix (Mod+W with settings active)", () => {
     // All three request tabs survive.
     expect(within(tablist).getAllByRole("tab")).toHaveLength(3);
     expect(
-      screen.queryByRole("tab", { name: /settings/i }),
+      within(tablist).queryByRole("tab", { name: /settings/i }),
     ).not.toBeInTheDocument();
   });
 

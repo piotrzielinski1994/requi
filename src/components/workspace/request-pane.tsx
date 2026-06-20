@@ -1,130 +1,20 @@
-import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import {
   PANE_TABS_LIST,
   PANE_TABS_TRIGGER,
 } from "@/components/workspace/pane-tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { KeyValueTable } from "@/components/workspace/key-value-table";
 import { BodyEditor } from "@/components/workspace/body-editor";
+import { ConfigEditorForm } from "@/components/workspace/config-editor";
+import {
+  AuthPanel,
+  HeadersPanel,
+  ParamsPanel,
+  ScriptPanel,
+  VarsPanel,
+} from "@/components/workspace/config-panels";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { Auth, RequestNode } from "@/components/workspace/mock-data";
+import type { RequestNode } from "@/components/workspace/mock-data";
 import type { EffectiveConfig, ResolvedValue } from "@/lib/workspace/resolve";
-
-const AUTH_TYPE_LABELS: Record<Auth["type"], string> = {
-  inherit: "Inherit",
-  none: "No Auth",
-  bearer: "Bearer Token",
-  basic: "Basic Auth",
-};
-
-function AuthFields({ auth }: { auth: Auth }) {
-  if (auth.type === "inherit") {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Inherited from parent folder
-      </p>
-    );
-  }
-
-  if (auth.type === "none") {
-    return <p className="text-sm text-muted-foreground">No authentication</p>;
-  }
-
-  if (auth.type === "bearer") {
-    return (
-      <div className="flex flex-col gap-1">
-        <label htmlFor="auth-token" className="text-xs text-muted-foreground">
-          Token
-        </label>
-        <Input
-          id="auth-token"
-          readOnly
-          value={auth.token}
-          className="font-mono"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="auth-username"
-          className="text-xs text-muted-foreground"
-        >
-          Username
-        </label>
-        <Input id="auth-username" readOnly value={auth.username} />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="auth-password"
-          className="text-xs text-muted-foreground"
-        >
-          Password
-        </label>
-        <PasswordField value={auth.password} />
-      </div>
-    </div>
-  );
-}
-
-function PasswordField({ value }: { value: string }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const Icon = isVisible ? EyeOff : Eye;
-
-  return (
-    <div className="relative">
-      <Input
-        id="auth-password"
-        type={isVisible ? "text" : "password"}
-        readOnly
-        value={value}
-        className="pr-9"
-      />
-      <button
-        type="button"
-        aria-label={isVisible ? "Hide password" : "Show password"}
-        aria-pressed={isVisible}
-        onClick={() => setIsVisible((visible) => !visible)}
-        className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground hover:text-foreground"
-      >
-        <Icon className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-function AuthPanel({ auth }: { auth: Auth }) {
-  return (
-    <div className="flex flex-col gap-3 p-3">
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Type</label>
-        <Select value={auth.type}>
-          <SelectTrigger aria-label="Auth type" className="w-48 text-xs">
-            {AUTH_TYPE_LABELS[auth.type]}
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value="inherit">Inherit</SelectItem>
-            <SelectItem value="none">No Auth</SelectItem>
-            <SelectItem value="bearer">Bearer Token</SelectItem>
-            <SelectItem value="basic">Basic Auth</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <AuthFields auth={auth} />
-    </div>
-  );
-}
 
 function EffectiveRow({
   label,
@@ -213,6 +103,9 @@ function RequestTabs({ request }: { request: RequestNode }) {
     >
       <div className="flex h-10.25 items-stretch border-b bg-muted/30">
         <TabsList aria-label="Request sections" className={PANE_TABS_LIST}>
+          <TabsTrigger value="vars" className={PANE_TABS_TRIGGER}>
+            Vars
+          </TabsTrigger>
           <TabsTrigger value="auth" className={PANE_TABS_TRIGGER}>
             Auth
           </TabsTrigger>
@@ -231,22 +124,22 @@ function RequestTabs({ request }: { request: RequestNode }) {
           <TabsTrigger value="effective" className={PANE_TABS_TRIGGER}>
             Effective
           </TabsTrigger>
+          <TabsTrigger value="settings" className={PANE_TABS_TRIGGER}>
+            Settings
+          </TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="vars">
+        <VarsPanel config={request.config} />
+      </TabsContent>
       <TabsContent value="auth">
         <AuthPanel auth={request.config.auth ?? { type: "inherit" }} />
       </TabsContent>
       <TabsContent value="headers">
-        <KeyValueTable
-          rows={request.config.headers ?? []}
-          emptyLabel="No headers"
-        />
+        <HeadersPanel config={request.config} />
       </TabsContent>
       <TabsContent value="params">
-        <KeyValueTable
-          rows={request.config.params ?? []}
-          emptyLabel="No query params"
-        />
+        <ParamsPanel config={request.config} />
       </TabsContent>
       <TabsContent value="body" className="min-h-0 flex-1">
         <BodyEditor
@@ -256,9 +149,7 @@ function RequestTabs({ request }: { request: RequestNode }) {
         />
       </TabsContent>
       <TabsContent value="script">
-        <pre className="p-3 font-mono text-xs text-muted-foreground">
-          {request.config.scripts?.pre || "// no pre-request script"}
-        </pre>
+        <ScriptPanel config={request.config} />
       </TabsContent>
       <TabsContent value="effective">
         {effectiveConfig ? (
@@ -268,6 +159,9 @@ function RequestTabs({ request }: { request: RequestNode }) {
             No resolved config
           </p>
         )}
+      </TabsContent>
+      <TabsContent value="settings" className="min-h-0 flex-1">
+        <ConfigEditorForm key={request.id} id={request.id} config={request.config} />
       </TabsContent>
     </Tabs>
   );

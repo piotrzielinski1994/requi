@@ -3,6 +3,11 @@ import { WorkspaceProvider } from "@/components/workspace/workspace-context";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useSettings } from "@/lib/settings/settings-context";
 import { deserialize, serialize } from "@/lib/workspace/disk-format";
+import {
+  listEnvironmentNames,
+  parseDotenv,
+  type ProcessEnv,
+} from "@/lib/workspace/environment";
 import type { WorkspaceFs } from "@/lib/workspace/fs";
 import type { FolderPicker } from "@/lib/workspace/folder-picker";
 import type { HttpClient } from "@/lib/http/model";
@@ -16,6 +21,8 @@ type LoadState =
       tree: TreeNode[];
       consoleLines: string[];
       workspaceName: string;
+      processEnv: ProcessEnv;
+      envText: string;
     };
 
 function readWorkspaceName(manifestRaw: string | undefined): string {
@@ -43,7 +50,7 @@ export function WorkspaceLoader({
   picker?: FolderPicker;
   httpClient?: HttpClient;
 }) {
-  const { settings, saveOpenTabs } = useSettings();
+  const { settings, saveOpenTabs, saveActiveEnvironment } = useSettings();
   const workspacePath = settings.workspacePath;
   const [state, setState] = useState<LoadState>(
     workspacePath ? { status: "loading" } : { status: "empty" },
@@ -76,6 +83,8 @@ export function WorkspaceLoader({
         tree: parsed.tree,
         consoleLines,
         workspaceName: readWorkspaceName(read.files["requi.workspace.json"]),
+        processEnv: parseDotenv(read.files[".env"] ?? ""),
+        envText: read.files[".env"] ?? "",
       });
     });
     return () => {
@@ -100,6 +109,11 @@ export function WorkspaceLoader({
   }
 
   const workspaceName = state.workspaceName;
+  const knownEnvironment = listEnvironmentNames(state.tree).includes(
+    settings.activeEnvironment ?? "",
+  )
+    ? settings.activeEnvironment
+    : undefined;
   return (
     <WorkspaceProvider
       key={workspacePath}
@@ -111,6 +125,11 @@ export function WorkspaceLoader({
         fs.writeWorkspace(workspacePath ?? "", serialize(tree, workspaceName))
       }
       httpClient={httpClient}
+      processEnv={state.processEnv}
+      envText={state.envText}
+      activeEnvironment={knownEnvironment}
+      onActiveEnvironmentChange={saveActiveEnvironment}
+      onEnvChange={(text) => fs.writeEnv(workspacePath ?? "", text)}
     >
       <WorkspaceLayout picker={picker} />
     </WorkspaceProvider>

@@ -19,5 +19,8 @@ export function useActionHotkeys(
     },
   }));
 
-  useHotkeys(definitions, { ignoreInputs: true });
+  // No global ignoreInputs: let the library pick per-hotkey. Mod/Ctrl combos
+  // and Escape fire even with focus in an input or the config editor; bare keys
+  // stay suppressed while typing.
+  useHotkeys(definitions);
 }

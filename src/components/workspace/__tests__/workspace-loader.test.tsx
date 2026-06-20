@@ -30,10 +30,15 @@ const sampleTree: TreeNode[] = [
   },
 ];
 
-function renderLoader(workspacePath: string | undefined, workspaces = {}) {
+function renderLoader(
+  workspacePath: string | undefined,
+  workspaces = {},
+  extraSettings: Partial<typeof DEFAULT_SETTINGS> = {},
+) {
   const settingsStore = createInMemorySettingsStore({
     ...DEFAULT_SETTINGS,
     workspacePath,
+    ...extraSettings,
   });
   const fs = createInMemoryWorkspaceFs(workspaces);
   return render(
@@ -42,6 +47,26 @@ function renderLoader(workspacePath: string | undefined, workspaces = {}) {
     </SettingsProvider>,
   );
 }
+
+const envTree: TreeNode[] = [
+  {
+    kind: "folder",
+    id: "pending",
+    name: "API",
+    config: { environments: { prod: { baseUrl: "https://api.example.com" } } },
+    children: [
+      {
+        kind: "request",
+        id: "pending",
+        name: "Get",
+        method: "GET",
+        url: "{{baseUrl}}/get",
+        body: "",
+        config: {},
+      },
+    ],
+  },
+];
 
 describe("WorkspaceLoader", () => {
   // AC-011, TC-007 - behavior
@@ -102,6 +127,33 @@ describe("WorkspaceLoader", () => {
       ).not.toBeInTheDocument();
     });
     expect(screen.getByText(/no workspace/i)).toBeInTheDocument();
+  });
+
+  // AC-003 - behavior: a persisted active env present in the tree stays active
+  it("should keep the persisted active environment if it exists in the tree", async () => {
+    renderLoader(
+      "/ws/env",
+      { "/ws/env": serialize(envTree, "Env") },
+      { activeEnvironment: "prod" },
+    );
+
+    const trigger = await screen.findByRole("combobox", {
+      name: /environment/i,
+    });
+    expect(trigger).toHaveTextContent("prod");
+  });
+
+  // AC-003, TC-002 - behavior: a persisted active env absent from the tree falls back
+  it("should fall back to No Environment if the persisted active env is not in the tree", async () => {
+    renderLoader(
+      "/ws/env",
+      { "/ws/env": serialize(envTree, "Env") },
+      { activeEnvironment: "ghost" },
+    );
+
+    await screen.findByText("API");
+    const trigger = screen.getByRole("combobox", { name: /environment/i });
+    expect(trigger).toHaveTextContent(/no environment/i);
   });
 
   // AC-009, E-7 - behavior: partial load surfaces skipped files in the console

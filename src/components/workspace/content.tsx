@@ -7,6 +7,8 @@ import { ContentHeader } from "@/components/workspace/content-header";
 import { UrlBar } from "@/components/workspace/url-bar";
 import { RequestPane } from "@/components/workspace/request-pane";
 import { ResponsePane } from "@/components/workspace/response-pane";
+import { FolderPane } from "@/components/workspace/folder-pane";
+import { EnvEditor } from "@/components/workspace/env-editor";
 import { ShortcutsSection } from "@/components/settings/shortcuts-section";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useSettings } from "@/lib/settings/settings-context";
@@ -36,18 +38,29 @@ function RequestView() {
 }
 
 export function Content() {
-  const { isSettingsActive } = useWorkspace();
+  const { isSettingsActive, editTarget } = useWorkspace();
 
   return (
     <div className="flex h-full flex-col">
       <ContentHeader />
-      {isSettingsActive ? (
+      {renderBody()}
+    </div>
+  );
+
+  function renderBody() {
+    if (isSettingsActive) {
+      return (
         <div className="flex-1 overflow-auto p-6">
           <ShortcutsSection />
         </div>
-      ) : (
-        <RequestView />
-      )}
-    </div>
-  );
+      );
+    }
+    if (editTarget?.kind === "config") {
+      return <FolderPane />;
+    }
+    if (editTarget?.kind === "env") {
+      return <EnvEditor />;
+    }
+    return <RequestView />;
+  }
 }
