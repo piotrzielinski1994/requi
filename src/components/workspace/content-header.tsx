@@ -1,8 +1,8 @@
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { cn } from "@/lib/utils";
-import { Plus, Settings, X } from "lucide-react";
+import { FileCog, Plus, Settings, X } from "lucide-react";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
-import type { RequestNode } from "@/components/workspace/mock-data";
+import type { RequestNode, TreeNode } from "@/components/workspace/mock-data";
 import {
   DndContext,
   PointerSensor,
@@ -18,6 +18,32 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+function findNode(nodes: TreeNode[], id: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+    if (node.kind === "folder") {
+      const found = findNode(node.children, id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
+function editorTabLabel(
+  editTarget: NonNullable<ReturnType<typeof useWorkspace>["editTarget"]>,
+  tree: TreeNode[],
+): string {
+  if (editTarget.kind === "env") {
+    return ".env";
+  }
+  const node = findNode(tree, editTarget.id);
+  return node ? `${node.name} · config` : "config";
+}
 
 function RequestTab({
   id,
@@ -92,6 +118,9 @@ export function ContentHeader() {
     closeRequest,
     isSettingsOpen,
     isSettingsActive,
+    editTarget,
+    tree,
+    closeEditor,
     openSettings,
     closeSettings,
     newRequest,
@@ -140,7 +169,11 @@ export function ContentHeader() {
                   key={id}
                   id={id}
                   request={request}
-                  isActive={id === activeRequestId && !isSettingsActive}
+                  isActive={
+                    id === activeRequestId &&
+                    !isSettingsActive &&
+                    editTarget === null
+                  }
                   onActivate={() => setActiveRequest(id)}
                   onClose={() => closeRequest(id)}
                 />
@@ -148,6 +181,30 @@ export function ContentHeader() {
             })}
           </SortableContext>
         </DndContext>
+        {editTarget !== null && (
+          <div className="-mb-px flex h-[calc(100%+1px)] items-center gap-1 border-r bg-accent px-3 text-sm shadow-[inset_0_-2px_0_0_var(--primary)]">
+            <span
+              role="tab"
+              aria-selected="true"
+              className="flex items-center gap-1.5 truncate text-foreground"
+            >
+              <FileCog aria-hidden="true" className="size-3.5 shrink-0" />
+              {editorTabLabel(editTarget, tree)}
+            </span>
+            <button
+              type="button"
+              aria-label={
+                editTarget.kind === "env"
+                  ? "Close .env editor"
+                  : "Close config editor"
+              }
+              onClick={closeEditor}
+              className="rounded-sm p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        )}
         {isSettingsOpen && (
           <div
             className={cn(

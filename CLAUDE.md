@@ -7,6 +7,15 @@ Briefing for Claude Code. Read [README.md](README.md) first - setup, commands, r
 - Keep replies short and to the point. No filler, no pleasantries, no recap of what the user just said.
 - Status updates fit in one or two sentences.
 
+## Running the app
+
+- Always shut the app down when finished - never leave it running in the background.
+- `TaskStop` (or killing `npm start`) only stops the `npm`/`tauri dev`/`vite` node procs; the spawned native `target/debug/requi` window keeps running detached. Kill all of them: `pkill -f "target/debug/requi"` AND `pkill -f "node_modules/.bin/tauri"` AND `pkill -f "requi/node_modules/.bin/vite"`, then confirm with `pgrep -fl "tauri dev|target/debug/requi"`.
+
+## UI / design
+
+- Read [docs/design.md](docs/design.md) before any UI change - it's the visual contract (shared with the `dbui` repo). Key rule: **no rounded corners anywhere** (`--radius` and every `--radius-*` pinned to `0rem` in `index.css`); don't raise them or add `rounded-full`/`rounded-xs`/`rounded-[..]` (token-based `rounded-{sm,md,lg}` are tolerated since they resolve to 0, but prefer stripping). Status dots are the one exception (a `size-2` filled circle). Inputs carry the autofill opt-out attrs (see `ui/input.tsx`).
+
 ## Learning from conversation
 
 If during a session you learn something project-specific that future-you would otherwise have to re-derive - a non-obvious convention the user prefers, a constraint that bit us, a gotcha worth recording - append it to [docs/learnings.md](docs/learnings.md). Examples: formatting rules the user repeated, gotchas that broke a hook/CI, naming conventions enforced via review.

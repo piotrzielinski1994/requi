@@ -22,17 +22,33 @@ import type { WriteResult } from "@/lib/workspace/fs";
 import { buildHttpRequest } from "@/lib/http/build-request";
 import { createFakeHttpClient } from "@/lib/http/fake-client";
 import type { HttpClient, ResponseState } from "@/lib/http/model";
-import type { HttpMethod } from "@/lib/workspace/model";
+import type { ConfigScope, HttpMethod } from "@/lib/workspace/model";
+import {
+  listEnvironmentNames,
+  parseDotenv,
+  setDotenvValue,
+} from "@/lib/workspace/environment";
+import { updateNodeConfig } from "@/lib/workspace/update-config";
+import { findNode } from "@/lib/workspace/tree-locate";
+import type { TokenTarget } from "@/components/workspace/url-token";
+import { useToast } from "@/components/ui/toast";
 
 type RequestOverride = Partial<Pick<RequestNode, "url" | "method" | "body">>;
 
+export type EditTarget =
+  | { kind: "config"; id: string }
+  | { kind: "env" }
+  | null;
+
 export type RequestTab =
+  | "vars"
   | "auth"
   | "headers"
   | "params"
   | "body"
   | "script"
-  | "effective";
+  | "effective"
+  | "settings";
 export type ResponseTab = "response" | "headers";
 
 type WorkspaceContextValue = {
@@ -48,6 +64,20 @@ type WorkspaceContextValue = {
   activeRequest: RequestNode | null;
   effectiveConfig: EffectiveConfig | null;
   responseState: (id: string) => ResponseState;
+  environmentNames: string[];
+  activeEnvironment: string | null;
+  setActiveEnvironment: (name: string | null) => void;
+  processEnv: Record<string, string>;
+  envText: string;
+  editTarget: EditTarget;
+  openConfigEditor: (id: string) => void;
+  openEnvEditor: () => void;
+  closeEditor: () => void;
+  saveNodeConfig: (id: string, config: ConfigScope) => void;
+  saveEnv: (text: string) => void;
+  setTokenValue: (target: TokenTarget, value: string) => void;
+  registerEditorSaver: (save: (() => void) | null) => void;
+  saveActiveEditor: () => void;
   isSettingsOpen: boolean;
   isSettingsActive: boolean;
   toggleFolder: (id: string) => void;
@@ -99,6 +129,11 @@ type WorkspaceProviderProps = {
   ) => void;
   onTreeChange?: (tree: TreeNode[]) => Promise<WriteResult>;
   httpClient?: HttpClient;
+  activeEnvironment?: string;
+  processEnv?: Record<string, string>;
+  envText?: string;
+  onActiveEnvironmentChange?: (name: string | null) => void;
+  onEnvChange?: (text: string) => void;
 };
 
 export function WorkspaceProvider({
@@ -111,8 +146,23 @@ export function WorkspaceProvider({
   onTabsChange,
   onTreeChange,
   httpClient,
+  activeEnvironment: initialActiveEnvironment,
+  processEnv: initialProcessEnv = {},
+  envText: initialEnvText = "",
+  onActiveEnvironmentChange,
+  onEnvChange,
 }: WorkspaceProviderProps) {
   const [tree, setTree] = useState<TreeNode[]>(initialTree);
+  const [activeEnvironment, setActiveEnvironmentState] = useState<string | null>(
+    initialActiveEnvironment ?? null,
+  );
+  const [envText, setEnvText] = useState(initialEnvText);
+  const [processEnv, setProcessEnv] = useState(() =>
+    Object.keys(initialProcessEnv).length > 0
+      ? initialProcessEnv
+      : parseDotenv(initialEnvText),
+  );
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [consoleLines, setConsoleLines] =
     useState<string[]>(initialConsoleLines);
   const [drafts, setDrafts] = useState<RequestNode[]>([]);
@@ -123,6 +173,12 @@ export function WorkspaceProvider({
     Map<string, ResponseState>
   >(() => new Map());
   const draftCounter = useRef(0);
+  const editorSaverRef = useRef<(() => void) | null>(null);
+  const { show: showToast } = useToast();
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
   const httpClientRef = useRef<HttpClient>(httpClient ?? createFakeHttpClient());
   useEffect(() => {
     if (httpClient) {
@@ -179,6 +235,14 @@ export function WorkspaceProvider({
   useEffect(() => {
     onTreeChangeRef.current = onTreeChange;
   }, [onTreeChange]);
+  const onActiveEnvironmentChangeRef = useRef(onActiveEnvironmentChange);
+  useEffect(() => {
+    onActiveEnvironmentChangeRef.current = onActiveEnvironmentChange;
+  }, [onActiveEnvironmentChange]);
+  const onEnvChangeRef = useRef(onEnvChange);
+  useEffect(() => {
+    onEnvChangeRef.current = onEnvChange;
+  }, [onEnvChange]);
   const isFirstTabsRender = useRef(true);
   useEffect(() => {
     if (isFirstTabsRender.current) {
@@ -208,6 +272,7 @@ export function WorkspaceProvider({
         current.includes(id) ? current : [...current, id],
       );
       setIsSettingsActive(false);
+      setEditTarget(null);
       setActiveRequestId(id);
     };
 
@@ -273,7 +338,11 @@ export function WorkspaceProvider({
       if (!node || responseStates.get(id)?.status === "sending") {
         return;
       }
-      const wire = buildHttpRequest(node, resolveConfig(tree, id));
+      const wire = buildHttpRequest(
+        node,
+        resolveConfig(tree, id, { environment: activeEnvironment ?? undefined }),
+        processEnv,
+      );
       setResponseStates((current) =>
         new Map(current).set(id, { status: "sending" }),
       );
@@ -307,7 +376,69 @@ export function WorkspaceProvider({
       setDrafts((current) => [...current, draft]);
       setOpenRequestIds((current) => [...current, id]);
       setIsSettingsActive(false);
+      setEditTarget(null);
       setActiveRequestId(id);
+    };
+
+    const saveNodeConfig = (id: string, config: ConfigScope) => {
+      const next = updateNodeConfig(tree, id, config);
+      setTree(next);
+      const persist = onTreeChangeRef.current;
+      if (!persist) {
+        showToastRef.current("Saved");
+        return;
+      }
+      persist(next).then((result) => {
+        if (result.ok) {
+          showToastRef.current("Saved");
+          return;
+        }
+        showToastRef.current(`Save failed: ${result.error}`);
+        setConsoleLines((lines) => [
+          ...lines,
+          `[workspace] failed to persist config: ${result.error}`,
+        ]);
+      });
+    };
+
+    const saveEnv = (text: string) => {
+      setEnvText(text);
+      setProcessEnv(parseDotenv(text));
+      const persist = onEnvChangeRef.current;
+      if (!persist) {
+        showToastRef.current("Saved");
+        return;
+      }
+      Promise.resolve(persist(text)).then(() => showToastRef.current("Saved"));
+    };
+
+    const setTokenValue = (target: TokenTarget, value: string) => {
+      if (target.kind === "dotenv") {
+        saveEnv(setDotenvValue(envText, target.key, value));
+        return;
+      }
+      const node = findNode(tree, target.scopeId);
+      if (!node) {
+        return;
+      }
+      const config = node.config;
+      const nextConfig: ConfigScope =
+        target.kind === "environment"
+          ? {
+              ...config,
+              environments: {
+                ...config.environments,
+                [target.env]: {
+                  ...config.environments?.[target.env],
+                  [target.name]: value,
+                },
+              },
+            }
+          : {
+              ...config,
+              variables: { ...config.variables, [target.name]: value },
+            };
+      saveNodeConfig(target.scopeId, nextConfig);
     };
 
     return {
@@ -326,10 +457,46 @@ export function WorkspaceProvider({
           : null,
       effectiveConfig:
         activeRequestId !== null
-          ? resolveConfig(tree, activeRequestId)
+          ? resolveConfig(tree, activeRequestId, {
+              environment: activeEnvironment ?? undefined,
+            })
           : null,
       responseState: (id: string) =>
         responseStates.get(id) ?? { status: "idle" },
+      environmentNames: listEnvironmentNames(tree),
+      activeEnvironment,
+      processEnv,
+      envText,
+      editTarget,
+      openConfigEditor: (id: string) => {
+        setIsSettingsActive(false);
+        if (requestsById.has(id)) {
+          setEditTarget(null);
+          setOpenRequestIds((current) =>
+            current.includes(id) ? current : [...current, id],
+          );
+          setActiveRequestId(id);
+          setActiveRequestTab("settings");
+          return;
+        }
+        setEditTarget({ kind: "config", id });
+      },
+      openEnvEditor: () => {
+        setIsSettingsActive(false);
+        setEditTarget({ kind: "env" });
+      },
+      closeEditor: () => setEditTarget(null),
+      saveNodeConfig,
+      saveEnv,
+      setTokenValue,
+      registerEditorSaver: (save: (() => void) | null) => {
+        editorSaverRef.current = save;
+      },
+      saveActiveEditor: () => editorSaverRef.current?.(),
+      setActiveEnvironment: (name: string | null) => {
+        setActiveEnvironmentState(name);
+        onActiveEnvironmentChangeRef.current?.(name);
+      },
       isSettingsOpen,
       isSettingsActive,
       toggleFolder: (id) =>
@@ -337,6 +504,7 @@ export function WorkspaceProvider({
       selectNode,
       setActiveRequest: (id) => {
         setIsSettingsActive(false);
+        setEditTarget(null);
         setActiveRequestId(id);
       },
       reorderRequests: (nextIds) =>
@@ -372,6 +540,7 @@ export function WorkspaceProvider({
       openSettings: () => {
         setIsSettingsOpen(true);
         setIsSettingsActive(true);
+        setEditTarget(null);
       },
       closeSettings: () => {
         setIsSettingsOpen(false);
@@ -392,6 +561,10 @@ export function WorkspaceProvider({
     isSettingsActive,
     requestsById,
     responseStates,
+    activeEnvironment,
+    processEnv,
+    envText,
+    editTarget,
   ]);
 
   return (

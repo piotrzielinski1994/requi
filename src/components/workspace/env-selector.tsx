@@ -4,38 +4,32 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { useWorkspace } from "@/components/workspace/workspace-context";
 
-type Environment = { id: string; name: string; color: string };
-
-const MOCK_ENVS: Environment[] = [
-  { id: "prod", name: "prod", color: "var(--color-red-500)" },
-];
+const NO_ENVIRONMENT = "__none__";
 
 export function EnvSelector() {
-  const active = MOCK_ENVS[0];
+  const { environmentNames, activeEnvironment, setActiveEnvironment } =
+    useWorkspace();
 
   return (
-    <Select value={active.id}>
+    <Select
+      value={activeEnvironment ?? NO_ENVIRONMENT}
+      onValueChange={(value) =>
+        setActiveEnvironment(value === NO_ENVIRONMENT ? null : value)
+      }
+    >
       <SelectTrigger
         aria-label="Environment"
         className="h-full gap-2 rounded-none border-0 border-l border-l-border bg-transparent px-3 text-xs shadow-none hover:bg-accent focus-visible:ring-0 dark:bg-transparent dark:hover:bg-accent"
       >
-        <span
-          className="size-2 shrink-0 rounded-full"
-          style={{ backgroundColor: active.color }}
-        />
-        {active.name}
+        {activeEnvironment ?? "No Environment"}
       </SelectTrigger>
       <SelectContent position="popper" align="end">
-        {MOCK_ENVS.map((env) => (
-          <SelectItem key={env.id} value={env.id}>
-            <span className="flex items-center gap-2">
-              <span
-                className="size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: env.color }}
-              />
-              {env.name}
-            </span>
+        <SelectItem value={NO_ENVIRONMENT}>No Environment</SelectItem>
+        {environmentNames.map((name) => (
+          <SelectItem key={name} value={name}>
+            {name}
           </SelectItem>
         ))}
       </SelectContent>

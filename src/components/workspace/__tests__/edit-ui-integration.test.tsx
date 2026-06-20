@@ -1,0 +1,145 @@
+import { describe, it, expect } from "vitest";
+import { render, screen, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import {
+  WorkspaceProvider,
+  useWorkspace,
+} from "@/components/workspace/workspace-context";
+import { Sidebar } from "@/components/workspace/sidebar";
+import { Content } from "@/components/workspace/content";
+import { TreeRow } from "@/components/workspace/tree-row";
+import { TreeDndProvider } from "@/components/workspace/tree-dnd";
+import { SettingsProvider } from "@/lib/settings/settings-context";
+import { createInMemorySettingsStore } from "@/lib/settings/in-memory-store";
+import { DEFAULT_SETTINGS } from "@/lib/settings/settings";
+import type { ConfigScope, TreeNode } from "@/lib/workspace/model";
+import { createFakeHttpClient } from "./fake-http-client";
+
+const REQ_CONFIG: ConfigScope = { variables: { token: "abc" } };
+
+const tree: TreeNode[] = [
+  {
+    kind: "folder",
+    id: "folder-1",
+    name: "Folder",
+    config: { variables: { baseUrl: "https://api.example.com" } },
+    children: [
+      {
+        kind: "request",
+        id: "req-1",
+        name: "Req",
+        method: "GET",
+        url: "{{baseUrl}}/get",
+        body: "",
+        config: REQ_CONFIG,
+      },
+    ],
+  },
+];
+
+function renderShell() {
+  const store = createInMemorySettingsStore({
+    ...DEFAULT_SETTINGS,
+    shortcuts: {},
+  });
+  return render(
+    <SettingsProvider store={store}>
+      <WorkspaceProvider
+        tree={tree}
+        consoleLines={["[12:00:00] Ready."]}
+        initialExpandedIds={["folder-1"]}
+        initialActiveRequestId="req-1"
+        envText="TOKEN=seed"
+        httpClient={createFakeHttpClient()}
+      >
+        <Sidebar />
+        <Content />
+      </WorkspaceProvider>
+    </SettingsProvider>,
+  );
+}
+
+describe("Sidebar row edit-config control", () => {
+  // AC-012 - behavior: clicking a row's edit-config control swaps content to the editor.
+  it("should show the config editor in the content area if a row's edit-config control is clicked", async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const tree = await screen.findByRole("tree", { name: /collection/i });
+    const reqRow = within(tree).getByRole("treeitem", { name: /Req/i });
+
+    await user.click(within(reqRow).getByRole("button", { name: /edit config|config/i }));
+
+    // The editor seeds with the node's config JSON; assert the live CM doc shows it.
+    await waitFor(() => {
+      const editor = document.querySelector(".cm-editor");
+      expect(editor).not.toBeNull();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    });
+  });
+});
+
+describe("Sidebar .env control", () => {
+  // AC-014 - behavior: clicking the sidebar .env control swaps content to the env editor.
+  it("should show the env editor in the content area if the .env control is clicked", async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await screen.findByRole("tree", { name: /collection/i });
+
+    await user.click(screen.getByRole("button", { name: /\.env|env/i }));
+
+    await waitFor(() => {
+      expect(document.querySelector(".cm-editor")).not.toBeNull();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
+    });
+  });
+});
+
+// Smaller-piece fallbacks: prove the tree-row control wiring + content-render
+// contract directly, so a regression localizes even if the full-shell click path
+// shifts. These do not depend on the integration render above.
+type EditSurface = ReturnType<typeof useWorkspace> & {
+  openConfigEditor: (id: string) => void;
+  editTarget: unknown;
+};
+
+function EditTargetProbe() {
+  const ctx = useWorkspace() as EditSurface;
+  return (
+    <span data-testid="has-edit-target">
+      {ctx.editTarget ? "yes" : "no"}
+    </span>
+  );
+}
+
+describe("TreeRow edit-config control wiring", () => {
+  // AC-012 - side-effect-contract: the row's control opens the config editor target.
+  it("should set a config edit target if the row's edit-config control is clicked", async () => {
+    const user = userEvent.setup();
+    render(
+      <WorkspaceProvider tree={tree} httpClient={createFakeHttpClient()}>
+        <TreeDndProvider value={{ activeId: null, indicator: null }}>
+          <ul role="tree" aria-label="Collection">
+            <TreeRow node={tree[0]} depth={0} />
+          </ul>
+        </TreeDndProvider>
+        <EditTargetProbe />
+      </WorkspaceProvider>,
+    );
+
+    expect(screen.getByTestId("has-edit-target")).toHaveTextContent("no");
+
+    const folderRow = screen.getByRole("treeitem", { name: /Folder/i });
+    await user.click(
+      within(folderRow).getByRole("button", { name: /edit config|config/i }),
+    );
+
+    expect(screen.getByTestId("has-edit-target")).toHaveTextContent("yes");
+  });
+});

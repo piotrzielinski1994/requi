@@ -10,6 +10,7 @@ export type ShortcutActionId =
   | "new-request"
   | "open-workspace"
   | "send-request"
+  | "save-active-editor"
   | "open-command-palette";
 
 export type ShortcutAction = {
@@ -87,6 +88,12 @@ export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = [
     name: "Send request",
     description: "Send the active request and load its response.",
     defaultHotkey: "Mod+Enter",
+  },
+  {
+    id: "save-active-editor",
+    name: "Save",
+    description: "Save the active config or .env editor.",
+    defaultHotkey: "Mod+S",
   },
   {
     id: "open-command-palette",

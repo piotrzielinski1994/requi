@@ -25,6 +25,7 @@ type SettingsContextValue = {
   saveShortcut: (id: ShortcutActionId, hotkey: string) => void;
   resetShortcut: (id: ShortcutActionId) => void;
   saveOpenTabs: (openRequestIds: string[], activeRequestId: string | null) => void;
+  saveActiveEnvironment: (name: string | null) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -108,6 +109,15 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
     [update],
   );
 
+  const saveActiveEnvironment = useCallback(
+    (name: string | null) =>
+      update((base) => ({
+        ...base,
+        activeEnvironment: name ?? undefined,
+      })),
+    [update],
+  );
+
   const value = useMemo<SettingsContextValue | null>(
     () =>
       settings === null
@@ -121,6 +131,7 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
             saveShortcut,
             resetShortcut,
             saveOpenTabs,
+            saveActiveEnvironment,
           },
     [
       settings,
@@ -131,6 +142,7 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
       saveShortcut,
       resetShortcut,
       saveOpenTabs,
+      saveActiveEnvironment,
     ],
   );
 

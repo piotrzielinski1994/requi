@@ -178,10 +178,10 @@ describe("Settings as an in-app tab", () => {
     await screen.findByRole("region", { name: /console/i });
 
     await user.keyboard("{Control>}{Shift>}s{/Shift}{/Control}");
-    const settingsTab = await screen.findByRole("tab", { name: /settings/i });
+    const tablist = screen.getByRole("tablist", { name: /open requests/i });
+    const settingsTab = within(tablist).getByRole("tab", { name: /settings/i });
     expect(settingsTab).toHaveAttribute("aria-selected", "true");
 
-    const tablist = screen.getByRole("tablist", { name: /open requests/i });
     await user.click(within(tablist).getByRole("tab", { name: "profile" }));
 
     // Settings deactivated -> content shows the request, not the shortcuts heading.
@@ -191,10 +191,9 @@ describe("Settings as an in-app tab", () => {
       ).not.toBeInTheDocument();
     });
     // The Settings tab is still present (open), just not active.
-    expect(screen.getByRole("tab", { name: /settings/i })).toHaveAttribute(
-      "aria-selected",
-      "false",
-    );
+    expect(
+      within(tablist).getByRole("tab", { name: /settings/i }),
+    ).toHaveAttribute("aria-selected", "false");
   });
 
   // AC-001 — side-effect-contract: cycling deactivates settings (edge case in the plan).

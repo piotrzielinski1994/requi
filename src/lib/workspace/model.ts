@@ -12,6 +12,7 @@ export type ScriptConfig = { pre?: string; post?: string };
 
 export type ConfigScope = {
   variables?: Record<string, string>;
+  environments?: Record<string, Record<string, string>>;
   headers?: KeyValue[];
   params?: KeyValue[];
   auth?: Auth;

@@ -2,7 +2,13 @@ import type { Auth, ScriptConfig, TreeNode } from "@/lib/workspace/model";
 
 export type Provenance = { scopeId: string; scopeName: string };
 
-export type ResolvedValue<T> = { value: T; from: Provenance };
+export type VariableOrigin = "variable" | "environment";
+
+export type ResolvedValue<T> = {
+  value: T;
+  from: Provenance;
+  origin?: VariableOrigin;
+};
 
 export type EffectiveConfig = {
   variables: Record<string, ResolvedValue<string>>;
@@ -63,6 +69,37 @@ function resolveKeyed(
     return Object.entries(entries).reduce(
       (inner, [key, value]) => ({ ...inner, [key]: { value, from } }),
       acc,
+    );
+  }, {});
+}
+
+function resolveVariables(
+  path: Scope[],
+  environment: string | undefined,
+): Record<string, ResolvedValue<string>> {
+  return path.reduce<Record<string, ResolvedValue<string>>>((acc, scope) => {
+    const envBlock =
+      environment !== undefined
+        ? scope.config.environments?.[environment]
+        : undefined;
+    const envFrom: Provenance = {
+      scopeId: `${scope.id}:${environment}`,
+      scopeName: `${scope.name} (${environment})`,
+    };
+    const withEnv = Object.entries(envBlock ?? {}).reduce(
+      (inner, [key, value]) => ({
+        ...inner,
+        [key]: { value, from: envFrom, origin: "environment" as const },
+      }),
+      acc,
+    );
+    const from = provenanceOf(scope);
+    return Object.entries(scope.config.variables ?? {}).reduce(
+      (inner, [key, value]) => ({
+        ...inner,
+        [key]: { value, from, origin: "variable" as const },
+      }),
+      withEnv,
     );
   }, {});
 }
@@ -136,10 +173,11 @@ function resolveTimeout(path: Scope[]): ResolvedValue<number> {
 export function resolveConfig(
   tree: TreeNode[],
   requestId: string,
+  options?: { environment?: string },
 ): EffectiveConfig {
   const path = findScopePath(tree, requestId, []) ?? [];
   return {
-    variables: resolveKeyed(path, (config) => config.variables),
+    variables: resolveVariables(path, options?.environment),
     headers: resolveHeaders(path),
     params: resolveKeyed(
       path,

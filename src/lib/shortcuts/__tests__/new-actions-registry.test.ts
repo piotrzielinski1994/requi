@@ -42,6 +42,14 @@ describe("SHORTCUT_ACTIONS new actions", () => {
     expect(action!.defaultHotkey).toBe("Mod+Shift+W");
   });
 
+  // behavior: a save action exists on Mod+S for the active editor.
+  it("should register save-active-editor with the Mod+S default", () => {
+    const action = findAction("save-active-editor");
+
+    expect(action).toBeDefined();
+    expect(action!.defaultHotkey).toBe("Mod+S");
+  });
+
   // AC-007 — behavior
   it("should give each new action a non-empty name and description", () => {
     const ids: ShortcutActionId[] = [

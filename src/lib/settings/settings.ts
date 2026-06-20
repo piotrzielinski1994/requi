@@ -17,6 +17,7 @@ export type Settings = {
   openRequestIds: string[];
   activeRequestId: string | null;
   workspacePath?: string;
+  activeEnvironment?: string;
 };
 
 export type SettingsStore = {
@@ -110,5 +111,9 @@ export function mergeSettings(defaults: Settings, partial: unknown): Settings {
       typeof partial.workspacePath === "string"
         ? partial.workspacePath
         : defaults.workspacePath,
+    activeEnvironment:
+      typeof partial.activeEnvironment === "string"
+        ? partial.activeEnvironment
+        : defaults.activeEnvironment,
   };
 }

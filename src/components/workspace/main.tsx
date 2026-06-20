@@ -34,6 +34,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     closeSettings,
     newRequest,
     sendRequest,
+    saveActiveEditor,
   } = useWorkspace();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
@@ -87,6 +88,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
         sendRequest(activeRequestId);
       }
     },
+    "save-active-editor": () => saveActiveEditor(),
   };
 
   useActionHotkeys({

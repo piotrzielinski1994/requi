@@ -95,6 +95,21 @@ describe("planReconcile remove set", () => {
     expect(result.remove).not.toContain(".git/config");
   });
 
+  // behavior - a workspace-root .env is read-only input, never reconciled away
+  it("should never remove a root .env even when it is absent from next", () => {
+    const current: FileMap = {
+      "requi.workspace.json": '{"schemaVersion":2}',
+      ".env": "TOKEN=abc123",
+      "gone.req.json": '{"name":"Gone"}',
+    };
+    const next: FileMap = { "requi.workspace.json": '{"schemaVersion":2}' };
+
+    const result = planReconcile(current, next);
+
+    expect(result.remove).not.toContain(".env");
+    expect(result.remove).toContain("gone.req.json");
+  });
+
   // AC-006 / behavior - moved folder old paths are removed
   it("should include the old managed paths in remove if a folder moved", () => {
     const current: FileMap = {

@@ -86,16 +86,44 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > A **workspace** is a folder on disk holding the collection tree + config. Point the app
 > at one by hand-editing `workspacePath` in that same `settings.json`; it loads on launch
 > (empty state if unset/invalid). Folders/requests carry an inheritable config (variables,
-> headers, params, auth, scripts, timeout); a request resolves it by inheriting from its
-> folder chain (child overrides parent) - the request pane's read-only **Effective** tab
-> shows each resolved value and where it came from. Config is authored by hand-editing the
-> workspace files (no in-app editing or save yet). On-disk format (schemaVersion 2):
+> environments, headers, params, auth, scripts, timeout); a request resolves it by inheriting
+> from its folder chain (child overrides parent) - the request pane's read-only **Effective**
+> tab shows each resolved value and where it came from. Config can be edited in the app (a
+> pencil on each sidebar row opens a raw-JSON editor for that node's `config` in the content
+> area; **Save** writes it back to the node's `folder.json`/`*.req.json`, disabled while the
+> JSON is invalid) or by hand-editing the files. The `.env` file has its own raw-text editor
+> (the **.env** button in the sidebar header; Save writes `<workspace>/.env` and re-parses it
+> live so token previews update without reload).
+>
+> **Variables & environments** (Bruno-style): any `{{name}}` token in a URL, header/param
+> value, auth field, or body is interpolated on send. Values come from `config.variables`
+> (plain) and, when an environment is active, from `config.environments.<name>` - both
+> inherited down the folder chain. Within one scope a plain variable wins over that scope's
+> environment block; across scopes the nearer scope wins. Environments are defined inside the
+> folder/request config (no dedicated env files); the sidebar header **env selector** lists
+> every environment name found in the tree plus "No Environment", and the active choice
+> persists per-installation (`activeEnvironment` in `settings.json`, falling back to No
+> Environment if it no longer exists). Interpolation is recursive (a variable value may
+> reference another `{{var}}`), cycle-guarded, and leaves unknown tokens verbatim. A `.env`
+> file at the workspace root (standard `KEY=value`, gitignore it) is the one dedicated config
+> file; reference its values as `{{process.env.KEY}}` (a separate namespace - a bare
+> `{{KEY}}` does not read `.env`). On-disk format (schemaVersion 2):
 >
 > ```
 > <workspace>/
 >   requi.workspace.json        manifest { schemaVersion, name }
 >   <folder>/folder.json        { name, config, order }
 >   <folder>/<request>.req.json { name, method, url, body, config, order }
+>   .env                        KEY=value (read-only, gitignored; {{process.env.KEY}})
+> ```
+>
+> A `config` with environments looks like:
+>
+> ```
+> { "variables": { "baseUrl": "https://default" },
+>   "environments": {
+>     "local": { "baseUrl": "http://localhost:3000" },
+>     "prod":  { "baseUrl": "https://api.example.com" } } }
 > ```
 >
 > `order` is the node's position among its siblings (written on a drag-move; siblings sort by
