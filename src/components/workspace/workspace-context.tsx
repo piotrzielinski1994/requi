@@ -19,6 +19,12 @@ import {
 } from "@/lib/workspace/resolve";
 import { moveNode as applyMove, type MoveTarget } from "@/lib/workspace/move";
 import type { WriteResult } from "@/lib/workspace/fs";
+import { buildHttpRequest } from "@/lib/http/build-request";
+import { createFakeHttpClient } from "@/lib/http/fake-client";
+import type { HttpClient, ResponseState } from "@/lib/http/model";
+import type { HttpMethod } from "@/lib/workspace/model";
+
+type RequestOverride = Partial<Pick<RequestNode, "url" | "method" | "body">>;
 
 export type RequestTab =
   | "auth"
@@ -41,6 +47,7 @@ type WorkspaceContextValue = {
   requestsById: Map<string, RequestNode>;
   activeRequest: RequestNode | null;
   effectiveConfig: EffectiveConfig | null;
+  responseState: (id: string) => ResponseState;
   isSettingsOpen: boolean;
   isSettingsActive: boolean;
   toggleFolder: (id: string) => void;
@@ -51,6 +58,9 @@ type WorkspaceContextValue = {
   closeRequest: (id: string) => void;
   closeAllRequests: () => void;
   setRequestBody: (id: string, body: string) => void;
+  setRequestUrl: (id: string, url: string) => void;
+  setRequestMethod: (id: string, method: HttpMethod) => void;
+  sendRequest: (id: string) => void;
   setRequestTab: (tab: RequestTab) => void;
   setResponseTab: (tab: ResponseTab) => void;
   openSettings: () => void;
@@ -88,6 +98,7 @@ type WorkspaceProviderProps = {
     activeRequestId: string | null,
   ) => void;
   onTreeChange?: (tree: TreeNode[]) => Promise<WriteResult>;
+  httpClient?: HttpClient;
 };
 
 export function WorkspaceProvider({
@@ -99,27 +110,37 @@ export function WorkspaceProvider({
   initialOpenRequestIds,
   onTabsChange,
   onTreeChange,
+  httpClient,
 }: WorkspaceProviderProps) {
   const [tree, setTree] = useState<TreeNode[]>(initialTree);
   const [consoleLines, setConsoleLines] =
     useState<string[]>(initialConsoleLines);
   const [drafts, setDrafts] = useState<RequestNode[]>([]);
-  const [bodyOverrides, setBodyOverrides] = useState<Map<string, string>>(
-    () => new Map(),
-  );
+  const [requestOverrides, setRequestOverrides] = useState<
+    Map<string, RequestOverride>
+  >(() => new Map());
+  const [responseStates, setResponseStates] = useState<
+    Map<string, ResponseState>
+  >(() => new Map());
   const draftCounter = useRef(0);
+  const httpClientRef = useRef<HttpClient>(httpClient ?? createFakeHttpClient());
+  useEffect(() => {
+    if (httpClient) {
+      httpClientRef.current = httpClient;
+    }
+  }, [httpClient]);
 
   const requestsById = useMemo(() => {
     const byId = indexRequests(tree);
     drafts.forEach((draft) => byId.set(draft.id, draft));
-    bodyOverrides.forEach((body, id) => {
+    requestOverrides.forEach((override, id) => {
       const base = byId.get(id);
       if (base) {
-        byId.set(id, { ...base, body });
+        byId.set(id, { ...base, ...override });
       }
     });
     return byId;
-  }, [tree, drafts, bodyOverrides]);
+  }, [tree, drafts, requestOverrides]);
 
   const restoredOpenIds = useMemo(() => {
     const known = indexRequests(tree);
@@ -206,7 +227,15 @@ export function WorkspaceProvider({
         return next;
       });
       setDrafts((current) => current.filter((draft) => draft.id !== id));
-      setBodyOverrides((current) => {
+      setRequestOverrides((current) => {
+        if (!current.has(id)) {
+          return current;
+        }
+        const next = new Map(current);
+        next.delete(id);
+        return next;
+      });
+      setResponseStates((current) => {
         if (!current.has(id)) {
           return current;
         }
@@ -220,16 +249,46 @@ export function WorkspaceProvider({
       setOpenRequestIds([]);
       setActiveRequestId(null);
       setDrafts([]);
-      setBodyOverrides(new Map());
+      setRequestOverrides(new Map());
+      setResponseStates(new Map());
       setIsSettingsOpen(false);
       setIsSettingsActive(false);
     };
 
-    const setRequestBody = (id: string, body: string) => {
-      setBodyOverrides((current) => {
+    const mergeOverride = (id: string, patch: RequestOverride) => {
+      setRequestOverrides((current) => {
         const next = new Map(current);
-        next.set(id, body);
+        next.set(id, { ...current.get(id), ...patch });
         return next;
+      });
+    };
+
+    const setRequestBody = (id: string, body: string) => mergeOverride(id, { body });
+    const setRequestUrl = (id: string, url: string) => mergeOverride(id, { url });
+    const setRequestMethod = (id: string, method: HttpMethod) =>
+      mergeOverride(id, { method });
+
+    const sendRequest = (id: string) => {
+      const node = requestsById.get(id);
+      if (!node || responseStates.get(id)?.status === "sending") {
+        return;
+      }
+      const wire = buildHttpRequest(node, resolveConfig(tree, id));
+      setResponseStates((current) =>
+        new Map(current).set(id, { status: "sending" }),
+      );
+      httpClientRef.current.send(wire).then((result) => {
+        setResponseStates((current) => {
+          if (!current.has(id)) {
+            return current;
+          }
+          return new Map(current).set(
+            id,
+            result.ok
+              ? { status: "success", response: result.response }
+              : { status: "error", message: result.error },
+          );
+        });
       });
     };
 
@@ -269,6 +328,8 @@ export function WorkspaceProvider({
         activeRequestId !== null
           ? resolveConfig(tree, activeRequestId)
           : null,
+      responseState: (id: string) =>
+        responseStates.get(id) ?? { status: "idle" },
       isSettingsOpen,
       isSettingsActive,
       toggleFolder: (id) =>
@@ -303,6 +364,9 @@ export function WorkspaceProvider({
       closeRequest,
       closeAllRequests,
       setRequestBody,
+      setRequestUrl,
+      setRequestMethod,
+      sendRequest,
       setRequestTab: setActiveRequestTab,
       setResponseTab: setActiveResponseTab,
       openSettings: () => {
@@ -327,6 +391,7 @@ export function WorkspaceProvider({
     isSettingsOpen,
     isSettingsActive,
     requestsById,
+    responseStates,
   ]);
 
   return (

@@ -33,6 +33,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     openSettings,
     closeSettings,
     newRequest,
+    sendRequest,
   } = useWorkspace();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
@@ -81,6 +82,11 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     "close-all-requests": () => closeAllRequests(),
     "new-request": () => newRequest(),
     "open-workspace": openWorkspace,
+    "send-request": () => {
+      if (activeRequestId !== null) {
+        sendRequest(activeRequestId);
+      }
+    },
   };
 
   useActionHotkeys({

@@ -1,9 +1,38 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { KeyValueTable } from "@/components/workspace/key-value-table";
+import { JsonViewer } from "@/components/workspace/json-viewer";
 import { PANE_TABS_LIST, PANE_TABS_TRIGGER } from "@/components/workspace/pane-tabs";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { RequestResponse } from "@/components/workspace/mock-data";
+import { filterJson } from "@/lib/http/filter";
+
+function ResponseBody({ body }: { body: string }) {
+  const [filter, setFilter] = useState("");
+  const filtered = filterJson(body, filter);
+
+  return (
+    <>
+      {filtered.ok ? (
+        <div className="min-h-0 flex-1 overflow-auto">
+          <JsonViewer text={filtered.text} />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto p-3 font-mono text-xs text-muted-foreground">
+          No match
+        </div>
+      )}
+      <Input
+        aria-label="Filter response"
+        value={filter}
+        onChange={(event) => setFilter(event.target.value)}
+        placeholder="Filter with a path, e.g. $.data.items[0]"
+        className="h-9 rounded-none border-0 border-t bg-background px-3 font-mono text-xs shadow-none focus-visible:border-t-transparent focus-visible:bg-accent focus-visible:ring-[1px] focus-visible:ring-ring/50 focus-visible:ring-inset dark:bg-background"
+      />
+    </>
+  );
+}
 
 function ResponseTabs({ response }: { response: RequestResponse }) {
   const { activeResponseTab, setResponseTab } = useWorkspace();
@@ -37,15 +66,7 @@ function ResponseTabs({ response }: { response: RequestResponse }) {
         value="response"
         className="flex min-h-0 flex-col data-[state=inactive]:hidden"
       >
-        <pre className="flex-1 overflow-auto p-3 font-mono text-xs">
-          {response.body || "(empty body)"}
-        </pre>
-        <Input
-          aria-label="Filter response"
-          readOnly
-          placeholder="Filter with a path, e.g. $.data.items[0]"
-          className="h-9 rounded-none border-0 border-t bg-background px-3 font-mono text-xs shadow-none focus-visible:border-t-transparent focus-visible:bg-accent focus-visible:ring-[1px] focus-visible:ring-ring/50 focus-visible:ring-inset dark:bg-background"
-        />
+        <ResponseBody body={response.body} />
       </TabsContent>
       <TabsContent value="headers">
         <KeyValueTable rows={response.headers} emptyLabel="No headers" />
@@ -54,16 +75,49 @@ function ResponseTabs({ response }: { response: RequestResponse }) {
   );
 }
 
-export function ResponsePane() {
-  const { activeRequest } = useWorkspace();
+function CenteredMessage({
+  children,
+  tone = "muted",
+}: {
+  children: string;
+  tone?: "muted" | "error";
+}) {
+  return (
+    <div
+      className={
+        tone === "error"
+          ? "flex h-full items-center justify-center p-6 text-center text-sm text-red-600 dark:text-red-400"
+          : "flex h-full items-center justify-center text-sm text-muted-foreground"
+      }
+    >
+      {children}
+    </div>
+  );
+}
 
-  if (!activeRequest?.response) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        No response
-      </div>
-    );
+export function ResponsePane() {
+  const { activeRequest, responseState } = useWorkspace();
+
+  if (!activeRequest) {
+    return <CenteredMessage>No response</CenteredMessage>;
   }
 
-  return <ResponseTabs response={activeRequest.response} />;
+  const state = responseState(activeRequest.id);
+
+  if (state.status === "sending") {
+    return <CenteredMessage>Sending…</CenteredMessage>;
+  }
+  if (state.status === "error") {
+    return <CenteredMessage tone="error">{state.message}</CenteredMessage>;
+  }
+
+  const response =
+    state.status === "success" ? state.response : activeRequest.response;
+  if (!response) {
+    return <CenteredMessage>No response</CenteredMessage>;
+  }
+
+  return (
+    <ResponseTabs key={`${activeRequest.id}:${state.status}`} response={response} />
+  );
 }
