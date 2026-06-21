@@ -10,5 +10,6 @@ export function createFakeHttpClient(
 ): HttpClient {
   return {
     send: () => Promise.resolve(result),
+    cancel: () => Promise.resolve(),
   };
 }

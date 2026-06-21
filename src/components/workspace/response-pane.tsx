@@ -10,9 +10,36 @@ import {
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { RequestResponse } from "@/components/workspace/mock-data";
 import { filterJson } from "@/lib/http/filter";
+import {
+  RESPONSE_RENDER_LIMIT_BYTES,
+  formatBytes,
+  formatDuration,
+} from "@/lib/http/format";
+
+function TooLargeBody({ body }: { body: string }) {
+  const preview = body.slice(0, RESPONSE_RENDER_LIMIT_BYTES);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b bg-muted/30 p-3 font-mono text-xs text-muted-foreground">
+        {`Response is ${formatBytes(body.length)} - showing the first ${formatBytes(
+          preview.length,
+        )}. Use a smaller request or a filter.`}
+      </div>
+      <pre className="min-h-0 flex-1 overflow-auto p-3 font-mono text-xs">
+        {preview}
+      </pre>
+    </div>
+  );
+}
 
 function ResponseBody({ body }: { body: string }) {
   const [filter, setFilter] = useState("");
+
+  if (body.length > RESPONSE_RENDER_LIMIT_BYTES) {
+    return <TooLargeBody body={body} />;
+  }
+
   const filtered = filterJson(body, filter);
 
   return (
@@ -61,8 +88,12 @@ function ResponseTabs({ response }: { response: RequestResponse }) {
           <span className="text-green-600 dark:text-green-400">
             {response.status}
           </span>
-          <span className="text-muted-foreground">{response.timeMs}ms</span>
-          <span className="text-muted-foreground">{response.sizeBytes}B</span>
+          <span className="text-muted-foreground">
+            {formatDuration(response.timeMs)}
+          </span>
+          <span className="text-muted-foreground">
+            {formatBytes(response.sizeBytes)}
+          </span>
         </div>
       </div>
       <TabsContent

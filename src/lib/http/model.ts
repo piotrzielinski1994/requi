@@ -12,16 +12,18 @@ export type HttpRequest = {
   body: string | null;
   auth: Auth;
   timeoutMs: number;
+  requestId: string;
 };
 
 export type HttpResponse = RequestResponse;
 
 export type SendResult =
   | { ok: true; response: HttpResponse }
-  | { ok: false; error: string };
+  | { ok: false; error: string; cancelled?: boolean };
 
 export type HttpClient = {
   send: (req: HttpRequest) => Promise<SendResult>;
+  cancel: (requestId: string) => Promise<void>;
 };
 
 export type ResponseState =
