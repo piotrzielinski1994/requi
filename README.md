@@ -44,9 +44,14 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > select); **Send** issues a real HTTP request through a Rust `send_http_request` command
 > (`reqwest`, rustls TLS) - the request's resolved config is applied (`{{var}}` substitution
 > in the URL + header/param values, query params merged into the URL, auth header, timeout,
-> and body for non-GET/DELETE methods). The response pane shows loading (`Sending…`), error
-> (the failure reason), or success (status/time/size + body + headers) per request; with no
-> send yet it falls back to the seeded response. The response **Filter** input narrows the
+> and body for non-GET/DELETE methods). While a request is in flight, **Send** becomes **Stop**
+> (the send shortcut/Enter also cancels): a `cancel_http_request` command fires a Rust
+> `CancellationToken` that aborts the in-flight `reqwest` send, returning the pane to idle (no
+> error shown). The response pane shows loading (`Sending…`), error (the failure reason), or
+> success (status + formatted time/size + body + headers) per request; with no send yet it falls
+> back to the seeded response. Time/size are human-readable (`142ms`/`1.52s`, `512 B`/`2.0 KB`/
+> `2.0 MB`), and a body over ~2 MB is not fed whole into the viewer - it shows a head-truncated
+> preview + a size notice (the filter is hidden) so a huge response can't freeze the UI. The response **Filter** input narrows the
 > shown body by a JSONPath-ish path (`$.args.foo`, `$.headers[0]`); an empty path shows the
 > full body, a path that matches nothing (or a non-JSON body) shows "No match". URL/method/body
 > edits live in session memory until saved: `Mod+S` (the same Save action, also in the command

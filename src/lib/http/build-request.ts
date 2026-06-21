@@ -66,6 +66,7 @@ export function buildHttpRequest(
       body: null,
       auth,
       timeoutMs: effective.timeoutMs.value,
+      requestId: crypto.randomUUID(),
     };
   }
 
@@ -89,5 +90,6 @@ export function buildHttpRequest(
     body,
     auth,
     timeoutMs: effective.timeoutMs.value,
+    requestId: crypto.randomUUID(),
   };
 }

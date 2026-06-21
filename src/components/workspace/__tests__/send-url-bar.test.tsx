@@ -78,27 +78,32 @@ describe("UrlBar Send button", () => {
     });
   });
 
-  // AC-005 — behavior: Send is disabled while the active request is sending.
-  it("should disable the Send button while the request is in flight", async () => {
+  // AC-001 - behavior: Send becomes Stop while in flight, then returns to Send.
+  it("should swap Send for Stop while the request is in flight", async () => {
     const user = userEvent.setup();
     const client = createFakeHttpClient(undefined, { manual: true });
     renderBar(client);
 
     const bar = screen.getByRole("group", { name: /url bar/i });
-    const send = within(bar).getByRole("button", { name: /send/i });
+    await user.click(within(bar).getByRole("button", { name: /^send$/i }));
 
-    expect(send).toBeEnabled();
-
-    await user.click(send);
-
-    expect(send).toBeDisabled();
+    await waitFor(() => {
+      expect(
+        within(bar).getByRole("button", { name: /stop/i }),
+      ).toBeInTheDocument();
+    });
+    expect(
+      within(bar).queryByRole("button", { name: /^send$/i }),
+    ).not.toBeInTheDocument();
 
     await act(async () => {
       client.resolveNext();
     });
 
     await waitFor(() => {
-      expect(send).toBeEnabled();
+      expect(
+        within(bar).getByRole("button", { name: /^send$/i }),
+      ).toBeInTheDocument();
     });
   });
 });

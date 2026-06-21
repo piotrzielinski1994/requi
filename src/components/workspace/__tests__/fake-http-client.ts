@@ -28,6 +28,7 @@ export type FakeHttpClient = HttpClient & {
   calls: HttpRequest[];
   readonly callCount: number;
   resolveNext: () => void;
+  cancelled: string[];
 };
 
 const DEFAULT_RESULT: SendResult = {
@@ -40,6 +41,7 @@ export function createFakeHttpClient(
   options: FakeHttpClientOptions = {},
 ): FakeHttpClient {
   const calls: HttpRequest[] = [];
+  const cancelled: string[] = [];
   const pending: Array<() => void> = [];
 
   const resultFor = (req: HttpRequest, index: number): SendResult =>
@@ -47,12 +49,17 @@ export function createFakeHttpClient(
 
   return {
     calls,
+    cancelled,
     get callCount() {
       return calls.length;
     },
     resolveNext: () => {
       const settle = pending.shift();
       settle?.();
+    },
+    cancel: (requestId: string): Promise<void> => {
+      cancelled.push(requestId);
+      return Promise.resolve();
     },
     send: (req: HttpRequest): Promise<SendResult> => {
       const index = calls.length;

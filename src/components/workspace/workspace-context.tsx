@@ -157,6 +157,7 @@ type WorkspaceContextValue = {
   setRequestUrl: (id: string, url: string) => void;
   setRequestMethod: (id: string, method: HttpMethod) => void;
   sendRequest: (id: string) => void;
+  cancelRequest: (id: string) => void;
   setRequestTab: (tab: RequestTab) => void;
   setResponseTab: (tab: ResponseTab) => void;
   openSettings: () => void;
@@ -271,6 +272,11 @@ export function WorkspaceProvider({
       httpClientRef.current = httpClient;
     }
   }, [httpClient]);
+  // Per-request send generation: bumped on each send so a stale result (one
+  // resolving after a cancel + re-send) can be ignored. The in-flight wire id
+  // lets a Stop cancel exactly the send it belongs to.
+  const sendGeneration = useRef<Map<string, number>>(new Map());
+  const inFlightRequestId = useRef<Map<string, string>>(new Map());
 
   const requestsById = useMemo(() => {
     const byId = indexRequests(tree);
@@ -482,13 +488,23 @@ export function WorkspaceProvider({
         }),
         processEnv,
       );
+      const generation = (sendGeneration.current.get(id) ?? 0) + 1;
+      sendGeneration.current.set(id, generation);
+      inFlightRequestId.current.set(id, wire.requestId);
       setResponseStates((current) =>
         new Map(current).set(id, { status: "sending" }),
       );
       httpClientRef.current.send(wire).then((result) => {
+        if (sendGeneration.current.get(id) !== generation) {
+          return;
+        }
+        inFlightRequestId.current.delete(id);
         setResponseStates((current) => {
           if (!current.has(id)) {
             return current;
+          }
+          if (!result.ok && result.cancelled) {
+            return new Map(current).set(id, { status: "idle" });
           }
           return new Map(current).set(
             id,
@@ -498,6 +514,26 @@ export function WorkspaceProvider({
           );
         });
       });
+    };
+
+    const cancelRequest = (id: string) => {
+      if (responseStates.get(id)?.status !== "sending") {
+        return;
+      }
+      // Bump the generation so the in-flight send's resolve is ignored, drop the
+      // pane back to idle now, and ask the native side to abort the connection.
+      sendGeneration.current.set(
+        id,
+        (sendGeneration.current.get(id) ?? 0) + 1,
+      );
+      const requestId = inFlightRequestId.current.get(id);
+      inFlightRequestId.current.delete(id);
+      setResponseStates((current) =>
+        new Map(current).set(id, { status: "idle" }),
+      );
+      if (requestId) {
+        void httpClientRef.current.cancel(requestId);
+      }
     };
 
     // Placement for a new node: an explicit target wins; else inside a selected
@@ -1005,6 +1041,7 @@ export function WorkspaceProvider({
       setRequestUrl,
       setRequestMethod,
       sendRequest,
+      cancelRequest,
       setRequestTab: setActiveRequestTab,
       setResponseTab: setActiveResponseTab,
       openSettings: () => {

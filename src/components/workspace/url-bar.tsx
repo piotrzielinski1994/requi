@@ -206,6 +206,7 @@ export function UrlBar() {
     setRequestUrl,
     setRequestMethod,
     sendRequest,
+    cancelRequest,
     focusUrlNonce,
   } = useWorkspace();
 
@@ -278,16 +279,30 @@ export function UrlBar() {
         environment={activeEnvironment}
         inputRef={inputRef}
         onChange={(url) => setRequestUrl(activeRequest.id, url)}
-        onSend={() => sendRequest(activeRequest.id)}
+        onSend={() =>
+          isSending
+            ? cancelRequest(activeRequest.id)
+            : sendRequest(activeRequest.id)
+        }
       />
-      <Button
-        type="button"
-        disabled={isSending}
-        onClick={() => sendRequest(activeRequest.id)}
-        className="h-full rounded-none border-0 border-l border-l-border"
-      >
-        Send
-      </Button>
+      {isSending ? (
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={() => cancelRequest(activeRequest.id)}
+          className="h-full rounded-none border-0 border-l border-l-border"
+        >
+          Stop
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          onClick={() => sendRequest(activeRequest.id)}
+          className="h-full rounded-none border-0 border-l border-l-border"
+        >
+          Send
+        </Button>
+      )}
     </div>
   );
 }

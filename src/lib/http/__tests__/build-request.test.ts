@@ -233,6 +233,28 @@ describe("buildHttpRequest - body per method", () => {
   });
 });
 
+describe("buildHttpRequest - requestId correlation", () => {
+  // TC-008, AC-007 - behavior: the wire request carries a non-empty requestId.
+  it("should attach a non-empty requestId to the built wire request", () => {
+    const node = request({ id: "r" });
+
+    const wire = buildHttpRequest(node, effectiveOf({}));
+
+    expect(typeof wire.requestId).toBe("string");
+    expect(wire.requestId.length).toBeGreaterThan(0);
+  });
+
+  // TC-008, AC-007 - behavior: a fresh id per send invocation (not the node id).
+  it("should generate a distinct requestId for each build invocation", () => {
+    const node = request({ id: "r" });
+
+    const first = buildHttpRequest(node, effectiveOf({}));
+    const second = buildHttpRequest(node, effectiveOf({}));
+
+    expect(first.requestId).not.toBe(second.requestId);
+  });
+});
+
 describe("buildHttpRequest - integration with resolveConfig", () => {
   // AC-004, TC-002 — behavior: real EffectiveConfig from the tree resolves and merges.
   it("should build the final url from a real resolved tree (var + params)", () => {
