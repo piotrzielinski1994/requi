@@ -17,7 +17,10 @@ describe("bodyToStored", () => {
 
   // behavior: a JSON array body is also json (payload is the array).
   it("should produce a json StoredBody if the body is a JSON array", () => {
-    expect(bodyToStored("[1, 2, 3]")).toEqual({ type: "json", payload: [1, 2, 3] });
+    expect(bodyToStored("[1, 2, 3]")).toEqual({
+      type: "json",
+      payload: [1, 2, 3],
+    });
   });
 
   // behavior: an empty body is text (not json), so it round-trips to "".

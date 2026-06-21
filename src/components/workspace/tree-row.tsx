@@ -1,10 +1,18 @@
-import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useTreeDnd } from "@/components/workspace/tree-dnd";
-import { emptyZoneId } from "@/lib/workspace/tree-locate";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { emptyZoneId, findNode } from "@/lib/workspace/tree-locate";
 import type {
   FolderNode,
   RequestNode,
@@ -12,17 +20,23 @@ import type {
 } from "@/components/workspace/mock-data";
 
 function useRowDnd(id: string) {
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } =
-    useDraggable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({ id });
   const { setNodeRef: setDropRef } = useDroppable({ id });
   const { indicator } = useTreeDnd();
   const setNodeRef = (el: HTMLElement | null) => {
     setDragRef(el);
     setDropRef(el);
   };
-  const dropBefore = indicator?.overId === id && indicator.position === "before";
+  const dropBefore =
+    indicator?.overId === id && indicator.position === "before";
   const dropAfter = indicator?.overId === id && indicator.position === "after";
-  const dropInside = indicator?.overId === id && indicator.position === "inside";
+  const dropInside =
+    indicator?.overId === id && indicator.position === "inside";
   return {
     attributes,
     listeners,
@@ -34,26 +48,155 @@ function useRowDnd(id: string) {
   };
 }
 
-function EditConfigButton({ id }: { id: string }) {
-  const { openConfigEditor } = useWorkspace();
+function RenameInput({ id, name }: { id: string; name: string }) {
+  const { commitRename, cancelRename } = useWorkspace();
+  const [value, setValue] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
+  // A rename can open right as a radix ContextMenu closes; the menu's focus
+  // teardown blurs this freshly-mounted input, and an unguarded blur-commit
+  // would instantly persist the default name and close the editor. Ignore that
+  // teardown blur (refocus instead) until the input has settled - a genuine
+  // user blur after that still commits.
+  const readyRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+    // Re-assert focus on the next tick so it wins against a radix menu's focus
+    // teardown that runs right after this mount (it would otherwise move focus
+    // to the body). After that the input is "settled" and a blur commits.
+    const settle = setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+      readyRef.current = true;
+    }, 0);
+    return () => clearTimeout(settle);
+  }, []);
+
+  const finish = (commit: boolean) => {
+    if (doneRef.current) {
+      return;
+    }
+    doneRef.current = true;
+    if (commit) {
+      commitRename(id, value);
+      return;
+    }
+    cancelRename();
+  };
+
   return (
-    <button
-      type="button"
-      aria-label="Edit config"
+    <input
+      ref={inputRef}
+      aria-label="Rename"
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      onClick={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
-        openConfigEditor(id);
+      onDoubleClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          finish(true);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          finish(false);
+        }
       }}
-      className="ml-auto shrink-0 rounded p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground"
-    >
-      <Pencil className="size-3" />
-    </button>
+      onBlur={() => {
+        if (!readyRef.current) {
+          // Re-assert focus on the next tick, not synchronously: a synchronous
+          // focus() inside onBlur ping-pongs with the radix teardown blur and
+          // recurses until the stack overflows.
+          const el = inputRef.current;
+          setTimeout(() => {
+            el?.focus();
+            el?.select();
+          }, 0);
+          return;
+        }
+        finish(true);
+      }}
+      className="min-w-0 flex-1 border bg-background px-1 text-[13px] outline-none focus:border-primary"
+    />
+  );
+}
+
+function RowContextMenu({
+  node,
+  children,
+}: {
+  node: TreeNode;
+  children: React.ReactNode;
+}) {
+  const {
+    newRequest,
+    newFolder,
+    beginRename,
+    duplicateRequest,
+    openConfigEditor,
+    requestDeleteNode,
+  } = useWorkspace();
+  // Create actions belong only on a FOLDER row (create INSIDE it). A request is
+  // a leaf - "new request on a request" is meaningless, so its menu is edit-only.
+  const isFolder = node.kind === "folder";
+  const insideTarget =
+    isFolder && node.kind === "folder"
+      ? { parentId: node.id, index: node.children.length }
+      : null;
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        {insideTarget && (
+          <>
+            <ContextMenuItem onSelect={() => newRequest(insideTarget)}>
+              New request
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => newFolder(insideTarget)}>
+              New folder
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
+        <ContextMenuItem onSelect={() => beginRename(node.id)}>
+          Rename
+        </ContextMenuItem>
+        {node.kind === "request" && (
+          <ContextMenuItem onSelect={() => duplicateRequest(node.id)}>
+            Duplicate
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem onSelect={() => openConfigEditor(node.id)}>
+          Edit
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          variant="destructive"
+          onSelect={() => requestDeleteNode(node.id)}
+        >
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
 function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
-  const { expandedFolderIds, selectedNodeId, selectNode } = useWorkspace();
+  const {
+    tree,
+    expandedFolderIds,
+    selectedNodeId,
+    selectNode,
+    renamingNodeId,
+    beginRename,
+  } = useWorkspace();
   const { activeId } = useTreeDnd();
   const {
     attributes,
@@ -68,31 +211,39 @@ function FolderRow({ node, depth }: { node: FolderNode; depth: number }) {
   const Chevron = isExpanded ? ChevronDown : ChevronRight;
   const isEmpty = node.children.length === 0;
   const isDragActive = activeId !== null && activeId !== node.id;
+  const isRenaming = renamingNodeId === node.id;
+  const displayName = findNode(tree, node.id)?.name ?? node.name;
 
   return (
     <li className="relative">
       {dropBefore && <DropLine />}
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        role="treeitem"
-        aria-expanded={isExpanded}
-        aria-selected={selectedNodeId === node.id}
-        tabIndex={0}
-        onClick={() => selectNode(node.id)}
-        style={{ paddingLeft: `${depth * 14 + 6}px` }}
-        className={cn(
-          "group flex cursor-pointer touch-none items-center gap-1 py-1 pr-2 text-[13px] hover:bg-accent",
-          isDragging && "opacity-50",
-          selectedNodeId === node.id && "bg-accent",
-          dropInside && "ring-1 ring-inset ring-primary",
-        )}
-      >
-        <Chevron className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="truncate">{node.name}</span>
-        <EditConfigButton id={node.id} />
-      </div>
+      <RowContextMenu node={node}>
+        <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
+          role="treeitem"
+          aria-expanded={isExpanded}
+          aria-selected={selectedNodeId === node.id}
+          tabIndex={0}
+          onClick={() => selectNode(node.id)}
+          onDoubleClick={() => beginRename(node.id)}
+          style={{ paddingLeft: `${depth * 14 + 6}px` }}
+          className={cn(
+            "group flex cursor-pointer touch-none items-center gap-1 py-1 pr-2 text-[13px] hover:bg-accent",
+            isDragging && "opacity-50",
+            selectedNodeId === node.id && "bg-accent",
+            dropInside && "ring-1 ring-inset ring-primary",
+          )}
+        >
+          <Chevron className="size-3.5 shrink-0 text-muted-foreground" />
+          {isRenaming ? (
+            <RenameInput id={node.id} name={displayName} />
+          ) : (
+            <span className="truncate">{displayName}</span>
+          )}
+        </div>
+      </RowContextMenu>
       {dropAfter && <DropLine />}
       {isExpanded ? (
         <ul role="group">
@@ -139,7 +290,13 @@ function EmptyDropZone({
 }
 
 function RequestRow({ node, depth }: { node: RequestNode; depth: number }) {
-  const { selectedNodeId, selectNode } = useWorkspace();
+  const {
+    requestsById,
+    selectedNodeId,
+    selectNode,
+    renamingNodeId,
+    beginRename,
+  } = useWorkspace();
   const {
     attributes,
     listeners,
@@ -148,37 +305,48 @@ function RequestRow({ node, depth }: { node: RequestNode; depth: number }) {
     dropBefore,
     dropAfter,
   } = useRowDnd(node.id);
+  const isRenaming = renamingNodeId === node.id;
+  // Read the merged name (requestsById applies the session override) so an
+  // auto-named / edited request's row reflects it - the tree node alone would
+  // show the stale on-disk name.
+  const displayName = requestsById.get(node.id)?.name ?? node.name;
 
   return (
     <li className="relative">
       {dropBefore && <DropLine />}
-      <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        role="treeitem"
-        aria-selected={selectedNodeId === node.id}
-        aria-label={`${node.method} ${node.name}`}
-        tabIndex={0}
-        onClick={() => selectNode(node.id)}
-        style={{ paddingLeft: `${depth * 14 + 10}px` }}
-        className={cn(
-          "group flex cursor-pointer touch-none items-center gap-2 py-1 pr-2 text-[13px] hover:bg-accent",
-          isDragging && "opacity-50",
-          selectedNodeId === node.id && "bg-accent",
-        )}
-      >
-        <span
+      <RowContextMenu node={node}>
+        <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
+          role="treeitem"
+          aria-selected={selectedNodeId === node.id}
+          aria-label={`${node.method} ${displayName}`}
+          tabIndex={0}
+          onClick={() => selectNode(node.id)}
+          onDoubleClick={() => beginRename(node.id)}
+          style={{ paddingLeft: `${depth * 14 + 10}px` }}
           className={cn(
-            "shrink-0 font-mono text-[12px]",
-            METHOD_COLOR[node.method],
+            "group flex cursor-pointer touch-none items-center gap-2 py-1 pr-2 text-[13px] hover:bg-accent",
+            isDragging && "opacity-50",
+            selectedNodeId === node.id && "bg-accent",
           )}
         >
-          {node.method}
-        </span>
-        <span className="truncate">{node.name}</span>
-        <EditConfigButton id={node.id} />
-      </div>
+          <span
+            className={cn(
+              "shrink-0 font-mono text-[12px]",
+              METHOD_COLOR[node.method],
+            )}
+          >
+            {node.method}
+          </span>
+          {isRenaming ? (
+            <RenameInput id={node.id} name={displayName} />
+          ) : (
+            <span className="truncate">{displayName}</span>
+          )}
+        </div>
+      </RowContextMenu>
       {dropAfter && <DropLine />}
     </li>
   );

@@ -141,7 +141,10 @@ function AuthFields({
         onCommit={(username) => onChange({ ...auth, username })}
       />
       <div className="flex flex-col gap-1">
-        <label htmlFor="auth-password" className="text-xs text-muted-foreground">
+        <label
+          htmlFor="auth-password"
+          className="text-xs text-muted-foreground"
+        >
           Password
         </label>
         <PasswordField
@@ -164,13 +167,7 @@ export function authForType(type: Auth["type"]): Auth {
   return { type };
 }
 
-export function AuthPanel({
-  id,
-  config,
-}: {
-  id: string;
-  config: ConfigScope;
-}) {
+export function AuthPanel({ id, config }: { id: string; config: ConfigScope }) {
   const { saveNodeConfig } = useWorkspace();
   const auth = config.auth ?? { type: "inherit" };
 
@@ -221,7 +218,13 @@ export function VarsPanel({ id, config }: { id: string; config: ConfigScope }) {
   );
 }
 
-export function HeadersPanel({ id, config }: { id: string; config: ConfigScope }) {
+export function HeadersPanel({
+  id,
+  config,
+}: {
+  id: string;
+  config: ConfigScope;
+}) {
   const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
@@ -232,7 +235,13 @@ export function HeadersPanel({ id, config }: { id: string; config: ConfigScope }
   );
 }
 
-export function ParamsPanel({ id, config }: { id: string; config: ConfigScope }) {
+export function ParamsPanel({
+  id,
+  config,
+}: {
+  id: string;
+  config: ConfigScope;
+}) {
   const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
@@ -243,7 +252,13 @@ export function ParamsPanel({ id, config }: { id: string; config: ConfigScope })
   );
 }
 
-export function ScriptPanel({ id, config }: { id: string; config: ConfigScope }) {
+export function ScriptPanel({
+  id,
+  config,
+}: {
+  id: string;
+  config: ConfigScope;
+}) {
   const { saveNodeConfig } = useWorkspace();
   const commit = (patch: { pre?: string; post?: string }) =>
     saveNodeConfig(id, {

@@ -13,10 +13,7 @@ import { bodyFixtureTree, jsonBodyRequest } from "./fixtures";
 
 // New persist-edits surface on the context; cast through an augmented type so
 // the probe compiles before workspace-context.tsx is extended (RED phase).
-type PendingClose =
-  | { kind: "one"; id: string }
-  | { kind: "all" }
-  | null;
+type PendingClose = { kind: "one"; id: string } | { kind: "all" } | null;
 
 type ActiveEditor = {
   scope: { kind: "config"; id: string } | { kind: "env" };
@@ -36,11 +33,7 @@ type PersistSurface = ReturnType<typeof useWorkspace> & {
   cancelPendingClose: () => void;
 };
 
-function PersistProbe({
-  editorSaver,
-}: {
-  editorSaver?: () => void;
-}) {
+function PersistProbe({ editorSaver }: { editorSaver?: () => void }) {
   const [editorResult, setEditorResult] = useState<boolean | "unset">("unset");
   const ctx = useWorkspace() as PersistSurface;
   const {
@@ -82,9 +75,7 @@ function PersistProbe({
         {[...dirtyRequestIds].sort().join(",") || "clean"}
       </span>
       <span data-testid="pending-close">{pendingLabel}</span>
-      <span data-testid="last-save-editor-result">
-        {String(editorResult)}
-      </span>
+      <span data-testid="last-save-editor-result">{String(editorResult)}</span>
       <button
         type="button"
         onClick={() => {
@@ -187,9 +178,9 @@ function PersistProbe({
   );
 }
 
-type OnTreeChange = (tree: TreeNode[]) => Promise<
-  { ok: true } | { ok: false; error: string }
->;
+type OnTreeChange = (
+  tree: TreeNode[],
+) => Promise<{ ok: true } | { ok: false; error: string }>;
 
 function renderProbe(
   props: {
@@ -213,9 +204,7 @@ describe("WorkspaceProvider saveActiveRequest", () => {
   // via onTreeChange; the value survives a tab switch.
   it("should fold url/method/body into the tree and persist if the active request is saved", async () => {
     const user = userEvent.setup();
-    const onTreeChange = vi
-      .fn<OnTreeChange>()
-      .mockResolvedValue({ ok: true });
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderProbe({ initialActiveRequestId: "req-json-body", onTreeChange });
 
     await user.click(screen.getByRole("button", { name: /edit url/i }));
@@ -236,16 +225,16 @@ describe("WorkspaceProvider saveActiveRequest", () => {
       "[https://edited.test/path]",
     );
     expect(screen.getByTestId("active-method")).toHaveTextContent("PUT");
-    expect(screen.getByTestId("active-body")).toHaveTextContent("[EDITED-BODY]");
+    expect(screen.getByTestId("active-body")).toHaveTextContent(
+      "[EDITED-BODY]",
+    );
   });
 
   // AC-001, TC-001 - side-effect-contract: the tree handed to onTreeChange
   // serializes + deserializes back to the edited url/method/body (round-trip).
   it("should persist a tree that round-trips to the edited values if the request is saved", async () => {
     const user = userEvent.setup();
-    const onTreeChange = vi
-      .fn<OnTreeChange>()
-      .mockResolvedValue({ ok: true });
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderProbe({ initialActiveRequestId: "req-json-body", onTreeChange });
 
     await user.click(screen.getByRole("button", { name: /edit url/i }));
@@ -320,33 +309,35 @@ describe("WorkspaceProvider saveActiveRequest", () => {
 
     // in-memory edit kept, dot clears (in-memory is the source of truth).
     expect(screen.getByTestId("dirty-ids")).toHaveTextContent("clean");
-    expect(await screen.findByText(/failed to persist edits: EACCES/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/failed to persist edits: EACCES/i),
+    ).toBeInTheDocument();
   });
 
-  // AC-008, TC-009 - behavior: an edited draft IS dirty (dot + confirm) but
-  // saving it is still a no-op (a draft has no file - real persistence is tree-crud).
-  it("should mark an edited draft dirty but still no-op when saving it", async () => {
+  // AC-008 (tree-crud) - behavior: new request CREATES a real on-disk node
+  // immediately (no draft); the new tab is a clean (non-dirty) saved request, and
+  // a subsequent edit makes it dirty like any on-disk request.
+  it("should create a clean on-disk request on new request and dirty it on edit", async () => {
     const user = userEvent.setup();
-    const onTreeChange = vi
-      .fn<OnTreeChange>()
-      .mockResolvedValue({ ok: true });
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderProbe({ initialActiveRequestId: "req-json-body", onTreeChange });
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    const draftId = screen.getByTestId("active-id").textContent ?? "";
-    expect(draftId).toMatch(/draft-/);
-    // a pristine draft is not dirty.
+    // create persisted immediately.
+    expect(onTreeChange).toHaveBeenCalledTimes(1);
+    const newId = screen.getByTestId("active-id").textContent ?? "";
+    expect(newId).not.toMatch(/draft-/);
+    // a freshly created request has no pending override -> not dirty.
     expect(screen.getByTestId("dirty-ids")).toHaveTextContent("clean");
 
     await user.click(screen.getByRole("button", { name: /edit url/i }));
-    // editing a draft now makes it dirty.
-    expect(screen.getByTestId("dirty-ids")).toHaveTextContent(draftId);
+    // editing it now makes it dirty (like any on-disk request).
+    expect(screen.getByTestId("dirty-ids")).toHaveTextContent(newId);
 
     await user.click(screen.getByRole("button", { name: /save request/i }));
-    // save is a no-op for a draft: nothing written to disk.
-    expect(onTreeChange).not.toHaveBeenCalled();
-    // still dirty (the edit was not persisted).
-    expect(screen.getByTestId("dirty-ids")).toHaveTextContent(draftId);
+    // the edit persisted (2nd write) and the request is clean again.
+    expect(onTreeChange).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("dirty-ids")).toHaveTextContent("clean");
   });
 });
 
@@ -527,32 +518,32 @@ describe("WorkspaceProvider close interception", () => {
     expect(screen.getByTestId("open-count")).toHaveTextContent("0");
   });
 
-  // AC-008 - behavior: closing a PRISTINE draft is silent (not dirty), so no
-  // pending-close dialog opens and the draft just goes away.
-  it("should close a pristine draft immediately with no pending close", async () => {
+  // AC-008 (tree-crud) - behavior: a freshly created request is clean (already on
+  // disk), so closing it opens NO pending-close dialog and the tab just closes.
+  it("should close a freshly created request immediately with no pending close", async () => {
     const user = userEvent.setup();
     renderProbe({ initialActiveRequestId: "req-json-body" });
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    expect(screen.getByTestId("active-id")).toHaveTextContent(/draft-/);
+    expect(screen.getByTestId("active-id")).not.toHaveTextContent(/draft-/);
 
     await user.click(
       screen.getByRole("button", { name: /request close active/i }),
     );
 
     expect(screen.getByTestId("pending-close")).toHaveTextContent("none");
-    // back to the saved request; the draft is gone.
+    // back to the previously open request; the new tab is gone.
     expect(screen.getByTestId("active-id")).toHaveTextContent("req-json-body");
   });
 
-  // AC-008, AC-011 - behavior: closing an EDITED draft prompts to confirm
-  // (an edited draft is dirty), guarding against silent loss.
-  it("should prompt to confirm if an edited draft is closed", async () => {
+  // AC-008, AC-011 - behavior: editing a freshly created request makes it dirty,
+  // so closing it then prompts to confirm (guards against silent loss).
+  it("should prompt to confirm if an edited new request is closed", async () => {
     const user = userEvent.setup();
     renderProbe({ initialActiveRequestId: "req-json-body" });
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    const draftId = screen.getByTestId("active-id").textContent ?? "";
+    const newId = screen.getByTestId("active-id").textContent ?? "";
     await user.click(screen.getByRole("button", { name: /edit url/i }));
 
     await user.click(
@@ -560,7 +551,7 @@ describe("WorkspaceProvider close interception", () => {
     );
 
     expect(screen.getByTestId("pending-close")).toHaveTextContent(
-      `one:${draftId}`,
+      `one:${newId}`,
     );
   });
 

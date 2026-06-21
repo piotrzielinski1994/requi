@@ -11,6 +11,7 @@ import {
   type PaletteCommand,
 } from "@/components/workspace/command-palette";
 import { CloseConfirmDialog } from "@/components/workspace/close-confirm-dialog";
+import { DeleteConfirmDialog } from "@/components/workspace/delete-confirm-dialog";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useSettings } from "@/lib/settings/settings-context";
 import { useActionHotkeys } from "@/lib/shortcuts/use-action-hotkeys";
@@ -22,11 +23,17 @@ import {
 import type { FolderPicker } from "@/lib/workspace/folder-picker";
 
 export function Main({ picker }: { picker?: FolderPicker }) {
-  const { settings, saveLayout, saveConsoleHidden, saveSidebarHidden, saveWorkspacePath } =
-    useSettings();
+  const {
+    settings,
+    saveLayout,
+    saveConsoleHidden,
+    saveSidebarHidden,
+    saveWorkspacePath,
+  } = useSettings();
   const {
     openRequestIds,
     activeRequestId,
+    selectedNodeId,
     isSettingsActive,
     editTarget,
     setActiveRequest,
@@ -36,6 +43,10 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     openSettings,
     closeSettings,
     newRequest,
+    newFolder,
+    duplicateRequest,
+    beginRename,
+    requestDeleteNode,
     sendRequest,
     saveActiveEditor,
     saveActiveRequest,
@@ -68,6 +79,22 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     });
   };
 
+  // The tree selection is the target for shortcut/palette ops; request-only ops
+  // fall back to the active request tab.
+  const targetNodeId = selectedNodeId ?? activeRequestId;
+
+  const isEditableFocused = () => {
+    const el = document.activeElement;
+    if (!(el instanceof HTMLElement)) {
+      return false;
+    }
+    return (
+      el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.isContentEditable
+    );
+  };
+
   const handlers: Partial<Record<ShortcutActionId, () => void>> = {
     "open-settings": openSettings,
     "close-settings": closeSettings,
@@ -90,6 +117,23 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     },
     "close-all-requests": () => requestCloseAll(),
     "new-request": () => newRequest(),
+    "new-folder": () => newFolder(),
+    "duplicate-request": () => {
+      if (targetNodeId !== null) {
+        duplicateRequest(targetNodeId);
+      }
+    },
+    "rename-node": () => {
+      if (targetNodeId !== null) {
+        beginRename(targetNodeId);
+      }
+    },
+    "delete-node": () => {
+      if (isEditableFocused() || targetNodeId === null) {
+        return;
+      }
+      requestDeleteNode(targetNodeId);
+    },
     "open-workspace": openWorkspace,
     "send-request": () => {
       if (activeRequestId !== null) {
@@ -129,6 +173,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
         commands={commands}
       />
       <CloseConfirmDialog />
+      <DeleteConfirmDialog />
     </>
   );
 

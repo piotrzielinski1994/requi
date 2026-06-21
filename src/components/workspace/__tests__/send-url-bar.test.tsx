@@ -12,10 +12,15 @@ import { createFakeHttpClient, type FakeHttpClient } from "./fake-http-client";
 
 function ActiveUrlReadout() {
   const { activeRequest } = useWorkspace();
-  return <span data-testid="active-url">{`[${activeRequest?.url ?? "none"}]`}</span>;
+  return (
+    <span data-testid="active-url">{`[${activeRequest?.url ?? "none"}]`}</span>
+  );
 }
 
-function renderBar(client: FakeHttpClient, initialActiveRequestId = "req-token") {
+function renderBar(
+  client: FakeHttpClient,
+  initialActiveRequestId = "req-token",
+) {
   return render(
     <WorkspaceProvider
       tree={fixtureTree}

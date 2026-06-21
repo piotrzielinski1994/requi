@@ -18,7 +18,7 @@ const PATH = "/tmp/ws";
 
 describe("in-memory writeEnv", () => {
   // AC-014 - behavior: writeEnv stores the .env content under files[".env"].
-  it("should store the env content so a later read returns it as files[\".env\"]", async () => {
+  it('should store the env content so a later read returns it as files[".env"]', async () => {
     const tree: TreeNode[] = [request("r1", "Solo")];
     const fs = createInMemoryWorkspaceFs({ [PATH]: serialize(tree) });
 
@@ -34,7 +34,9 @@ describe("in-memory writeEnv", () => {
 
   // AC-014 - side-effect-contract: writeEnv returns { ok: true } on success.
   it("should return ok true if the env write succeeds", async () => {
-    const fs = createInMemoryWorkspaceFs({ [PATH]: serialize([request("r1")]) });
+    const fs = createInMemoryWorkspaceFs({
+      [PATH]: serialize([request("r1")]),
+    });
 
     const result = await fs.writeEnv(PATH, "TOKEN=abc123");
 
@@ -62,7 +64,9 @@ describe("in-memory writeEnv", () => {
 
   // AC-014 - behavior: writing .env then reading round-trips the latest content.
   it("should return the latest env content if writeEnv is called twice", async () => {
-    const fs = createInMemoryWorkspaceFs({ [PATH]: serialize([request("r1")]) });
+    const fs = createInMemoryWorkspaceFs({
+      [PATH]: serialize([request("r1")]),
+    });
 
     await fs.writeEnv(PATH, "TOKEN=first");
     await fs.writeEnv(PATH, "TOKEN=second");

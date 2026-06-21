@@ -76,7 +76,10 @@ describe("empty-folder drop zone", () => {
     children: [],
   };
 
-  function renderEmpty(activeId: string | null, indicator: DropIndicator | null) {
+  function renderEmpty(
+    activeId: string | null,
+    indicator: DropIndicator | null,
+  ) {
     return render(
       <WorkspaceProvider
         tree={[emptyFolder]}

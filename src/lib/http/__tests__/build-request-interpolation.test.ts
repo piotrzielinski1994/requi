@@ -68,11 +68,7 @@ describe("buildHttpRequest - body interpolation", () => {
       body: '{"token":"{{process.env.JWT}}"}',
     });
 
-    const wire = buildHttpRequest(
-      node,
-      effectiveOf({}),
-      { JWT: "ey.signed" },
-    );
+    const wire = buildHttpRequest(node, effectiveOf({}), { JWT: "ey.signed" });
 
     expect(wire.body).toBe('{"token":"ey.signed"}');
   });
@@ -171,7 +167,9 @@ describe("buildHttpRequest - process.env in url and headers", () => {
 
     const wire = buildHttpRequest(
       node,
-      effectiveOf({ headers: { Authorization: "Bearer {{process.env.TOKEN}}" } }),
+      effectiveOf({
+        headers: { Authorization: "Bearer {{process.env.TOKEN}}" },
+      }),
       { TOKEN: "abc123" },
     );
 
@@ -183,11 +181,9 @@ describe("buildHttpRequest - process.env in url and headers", () => {
   it("should interpolate {{process.env.X}} in the url", () => {
     const node = request({ id: "r", url: "{{process.env.BASE}}/get" });
 
-    const wire = buildHttpRequest(
-      node,
-      effectiveOf({}),
-      { BASE: "https://env.test" },
-    );
+    const wire = buildHttpRequest(node, effectiveOf({}), {
+      BASE: "https://env.test",
+    });
 
     expect(wire.url).toBe("https://env.test/get");
   });
@@ -196,11 +192,7 @@ describe("buildHttpRequest - process.env in url and headers", () => {
   it("should leave a bare {{KEY}} untouched if it only exists in process.env", () => {
     const node = request({ id: "r", url: "{{TOKEN}}/get" });
 
-    const wire = buildHttpRequest(
-      node,
-      effectiveOf({}),
-      { TOKEN: "abc123" },
-    );
+    const wire = buildHttpRequest(node, effectiveOf({}), { TOKEN: "abc123" });
 
     expect(wire.url).toBe("{{TOKEN}}/get");
   });

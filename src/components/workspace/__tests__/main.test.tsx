@@ -31,7 +31,10 @@ function renderMainWithoutRequest() {
   const store = createInMemorySettingsStore(DEFAULT_SETTINGS);
   return render(
     <SettingsProvider store={store}>
-      <WorkspaceProvider tree={fixtureTree} consoleLines={["[12:00:00] Ready."]}>
+      <WorkspaceProvider
+        tree={fixtureTree}
+        consoleLines={["[12:00:00] Ready."]}
+      >
         <Main />
       </WorkspaceProvider>
     </SettingsProvider>,

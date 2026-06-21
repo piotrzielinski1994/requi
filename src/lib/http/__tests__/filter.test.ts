@@ -75,7 +75,11 @@ describe("filterJson - navigation", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.text).toBe(
-        JSON.stringify({ key: "Content-Type", value: "application/json" }, null, 2),
+        JSON.stringify(
+          { key: "Content-Type", value: "application/json" },
+          null,
+          2,
+        ),
       );
     }
   });

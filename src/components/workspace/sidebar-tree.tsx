@@ -11,6 +11,12 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { TreeRow } from "@/components/workspace/tree-row";
 import {
@@ -55,7 +61,15 @@ function projectPosition(
 }
 
 export function SidebarTree() {
-  const { tree, moveNode, expandedFolderIds, toggleFolder } = useWorkspace();
+  const {
+    tree,
+    moveNode,
+    expandedFolderIds,
+    toggleFolder,
+    newRequest,
+    newFolder,
+  } = useWorkspace();
+  const rootTarget = { parentId: null as string | null, index: tree.length };
   const [activeId, setActiveId] = useState<string | null>(null);
   const [indicator, setIndicator] = useState<DropIndicator | null>(null);
 
@@ -86,7 +100,11 @@ export function SidebarTree() {
     if (isOverFolder && !expandedFolderIds.has(overId)) {
       toggleFolder(overId);
     }
-    const position = projectPosition(event, Boolean(isOverFolder), isOverFolder);
+    const position = projectPosition(
+      event,
+      Boolean(isOverFolder),
+      isOverFolder,
+    );
     setIndicator({ overId, position });
   };
 
@@ -103,7 +121,11 @@ export function SidebarTree() {
       return;
     }
     const from = locateNode(tree, dragId);
-    if (from && from.parentId === target.parentId && from.index === target.index) {
+    if (
+      from &&
+      from.parentId === target.parentId &&
+      from.index === target.index
+    ) {
       return;
     }
     moveNode(dragId, target);
@@ -112,42 +134,56 @@ export function SidebarTree() {
   const activeNode = activeId ? findNode(tree, activeId) : null;
 
   return (
-    <ScrollArea className="flex-1">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => {
-          setActiveId(null);
-          setIndicator(null);
-        }}
-      >
-        <TreeDndProvider value={{ activeId, indicator }}>
-          <ul role="tree" aria-label="Collection">
-            {tree.map((node) => (
-              <TreeRow key={node.id} node={node} depth={0} />
-            ))}
-          </ul>
-          <DragOverlay>
-            {activeNode ? (
-              <div className="rounded-sm bg-accent px-2 py-1 text-[13px] shadow">
-                {activeNode.name}
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ScrollArea className="flex-1">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => {
+                setActiveId(null);
+                setIndicator(null);
+              }}
+            >
+              <TreeDndProvider value={{ activeId, indicator }}>
+                <ul role="tree" aria-label="Collection">
+                  {tree.map((node) => (
+                    <TreeRow key={node.id} node={node} depth={0} />
+                  ))}
+                </ul>
+                <DragOverlay>
+                  {activeNode ? (
+                    <div className="rounded-sm bg-accent px-2 py-1 text-[13px] shadow">
+                      {activeNode.name}
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </TreeDndProvider>
+            </DndContext>
+            {tree.length === 0 && (
+              <div className="flex flex-col gap-1 px-3 py-4 text-center">
+                <p className="text-sm font-medium">No workspace</p>
+                <p className="text-xs text-muted-foreground">
+                  Set "workspacePath" in settings.json to an exported workspace
+                  folder.
+                </p>
               </div>
-            ) : null}
-          </DragOverlay>
-        </TreeDndProvider>
-      </DndContext>
-      {tree.length === 0 && (
-        <div className="flex flex-col gap-1 px-3 py-4 text-center">
-          <p className="text-sm font-medium">No workspace</p>
-          <p className="text-xs text-muted-foreground">
-            Set "workspacePath" in settings.json to an exported workspace
-            folder.
-          </p>
+            )}
+          </ScrollArea>
         </div>
-      )}
-    </ScrollArea>
+      </ContextMenuTrigger>
+      <ContextMenuContent onCloseAutoFocus={(event) => event.preventDefault()}>
+        <ContextMenuItem onSelect={() => newRequest(rootTarget)}>
+          New request
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => newFolder(rootTarget)}>
+          New folder
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

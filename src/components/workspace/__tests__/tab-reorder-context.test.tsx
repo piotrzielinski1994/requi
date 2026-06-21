@@ -70,10 +70,7 @@ describe("WorkspaceProvider reorderRequests", () => {
   // AC-001, TC-001 — behavior
   it("should set openRequestIds to the given permutation if reorderRequests is called", async () => {
     const user = userEvent.setup();
-    renderProbe(
-      ["req-profile", "req-token", "req-session"],
-      "req-profile",
-    );
+    renderProbe(["req-profile", "req-token", "req-session"], "req-profile");
 
     expect(screen.getByTestId("open-ids")).toHaveTextContent(
       "req-profile,req-token,req-session",
@@ -91,10 +88,7 @@ describe("WorkspaceProvider reorderRequests", () => {
   // AC-002 — behavior: reorder must not change which tab is active.
   it("should keep the same active tab if reorderRequests moves the active tab", async () => {
     const user = userEvent.setup();
-    renderProbe(
-      ["req-profile", "req-token", "req-session"],
-      "req-profile",
-    );
+    renderProbe(["req-profile", "req-token", "req-session"], "req-profile");
 
     expect(screen.getByTestId("active-id")).toHaveTextContent("req-profile");
 
@@ -113,16 +107,15 @@ describe("WorkspaceProvider reorderRequests", () => {
   // AC-002 — behavior: reorder is order-only, never opens or closes tabs.
   it("should not open or close any tab if reorderRequests is called", async () => {
     const user = userEvent.setup();
-    renderProbe(
-      ["req-profile", "req-token", "req-session"],
-      "req-profile",
-    );
+    renderProbe(["req-profile", "req-token", "req-session"], "req-profile");
 
     expect(screen.getByTestId("open-ids").textContent?.split(",")).toHaveLength(
       3,
     );
 
-    await user.click(screen.getByRole("button", { name: /reorder swap ends/i }));
+    await user.click(
+      screen.getByRole("button", { name: /reorder swap ends/i }),
+    );
 
     // The order changed (RED until reorderRequests exists)...
     expect(screen.getByTestId("open-ids")).toHaveTextContent(
@@ -177,7 +170,9 @@ describe("ContentHeader settings tab vs reorder", () => {
     await user.click(screen.getByRole("button", { name: /open settings/i }));
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
-    expect(within(tablist).getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Settings" }),
+    ).toBeInTheDocument();
     // Before: request tabs are profile, then token (settings tab is separate).
     const requestTabNamesBefore = within(tablist)
       .getAllByRole("tab")
@@ -185,7 +180,9 @@ describe("ContentHeader settings tab vs reorder", () => {
       .filter((name) => name !== "Settings");
     expect(requestTabNamesBefore).toEqual(["GETprofile", "POSTtoken"]);
 
-    await user.click(screen.getByRole("button", { name: /reorder token-first/i }));
+    await user.click(
+      screen.getByRole("button", { name: /reorder token-first/i }),
+    );
 
     // The request tabs actually reordered to token, then profile (RED until
     // reorderRequests exists) ...
@@ -195,9 +192,13 @@ describe("ContentHeader settings tab vs reorder", () => {
       .filter((name) => name !== "Settings");
     expect(requestTabNamesAfter).toEqual(["POSTtoken", "GETprofile"]);
     // ... the Settings tab survives that request-tab reorder ...
-    expect(within(tablist).getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Settings" }),
+    ).toBeInTheDocument();
     // ... and was never part of the reorderable openRequestIds set.
     expect(screen.getByTestId("open-ids")).not.toHaveTextContent("settings");
-    expect(screen.getByTestId("open-ids")).toHaveTextContent("req-token,req-profile");
+    expect(screen.getByTestId("open-ids")).toHaveTextContent(
+      "req-token,req-profile",
+    );
   });
 });

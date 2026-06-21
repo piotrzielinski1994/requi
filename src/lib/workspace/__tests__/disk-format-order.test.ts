@@ -98,9 +98,7 @@ describe("disk-format serialize order field", () => {
     const map = serialize(tree);
 
     const orderOf = (suffix: string): number => {
-      const entry = Object.entries(map).find(([path]) =>
-        path.endsWith(suffix),
-      );
+      const entry = Object.entries(map).find(([path]) => path.endsWith(suffix));
       if (!entry) {
         throw new Error(`no file ending with ${suffix}`);
       }
@@ -131,11 +129,7 @@ describe("disk-format order round-trip", () => {
   // AC-011 - behavior: nested children order also survives
   it("should preserve nested children order through a round-trip", () => {
     const tree: TreeNode[] = [
-      folder("Group", [
-        request("Charlie"),
-        request("Bravo"),
-        request("Alpha"),
-      ]),
+      folder("Group", [request("Charlie"), request("Bravo"), request("Alpha")]),
     ];
 
     const result = expectOk(deserialize(serialize(tree)));

@@ -55,8 +55,7 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > dot** - a request's dot sits beside its tab name (set by url/method/body edits **or** an
 > unsaved config edit), a folder config / `.env` editor's dot sits on its editor tab. Closing
 > any tab/editor with unsaved edits (its `X`, `Mod+W`, or close-all) asks to confirm before
-> discarding. Drafts show a dot once edited (so an accidental close warns), but a draft has no
-> file yet, so saving one is a no-op (creating its file is a later feature).
+> discarding.
 > The request pane's **Body** tab is a CodeMirror editor (JetBrains Darcula theme, JSON
 > syntax highlighting, auto-closing brackets, and inline JSON syntax linting - malformed
 > JSON gets a red underline + gutter marker).
@@ -64,7 +63,8 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > Per-installation UI settings (panel split sizes, whether the console is hidden, and the
 > set of open request tabs + the active one) persist to a `settings.json` in the OS
 > app-config dir via the Tauri Store plugin, restored on launch (open tabs reopen on
-> restart; ids no longer in the workspace are dropped, in-memory drafts are not persisted).
+> restart; ids no longer in the workspace are dropped, freshly-created in-session ids are not
+> persisted until the workspace reloads from disk).
 > Keyboard-shortcut overrides are stored separately in a `keymap.json` in the same dir, so
 > a user can sync their keymap across devices independently of the device-local UI state.
 > In `npm run dev` (browser, no native shell) there is no Tauri host, so settings fall back
@@ -79,8 +79,7 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > type to filter, arrow to move, Enter (or click) to run, Esc to close. Settings open as a
 > tab inside the workspace (sidebar + console stay visible); `Mod+Shift+S` opens/activates it,
 > `Esc` or the tab's close button returns to the request. `Mod+W` closes whatever tab is
-> active (settings or a request). New request opens an in-memory draft tab (not yet saved to
-> disk). Open workspace shows a native folder picker and loads the chosen folder. Rebind any
+> active (settings or a request). Open workspace shows a native folder picker and loads the chosen folder. Rebind any
 > shortcut there (no on-screen link yet); a new binding is rejected if another action already
 > uses it. Settings is not a route, so it never resets the workspace.
 >
@@ -89,6 +88,23 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > onto another folder to move it inside, or between two rows to reorder siblings; the change
 > is written back to the workspace on disk so it survives a reload (in `npm run dev` there is
 > no Tauri host, so the move stays in-session only).
+>
+> The collection tree is fully writable from the UI. **Right-click a folder** for New request /
+> New folder (created inside it) / Rename / Delete; **right-click a request** for Rename /
+> Duplicate / Delete; **right-click the empty sidebar area** for New request / New folder (at the
+> workspace root). The same ops run from the **command palette** or via shortcuts: new request
+> `Mod+T`, new folder `Mod+Shift+N`, duplicate `Mod+D`, rename `F2`, delete `Mod+Backspace`
+> (palette/shortcut ops act on the selected node; `delete` is suppressed while a text field is
+> focused). Palette/shortcut creates land relative to the selection (inside a selected folder,
+> after a selected request, else at the root). New request and new folder both write to disk
+> immediately and open/select the new node. A new **folder** drops into inline rename; a new
+> **request** opens its tab and **focuses the URL input** - while it stays unnamed, its name
+> auto-tracks the URL path (e.g. typing `{{baseUrl}}/widgets` names it `/widgets`, the same
+> path-as-name convention the workspace files use). The auto-naming stops once you rename the
+> request (inline `F2` or Settings) or save it; an already-named request never renames from a
+> URL edit. Rename is an inline edit in the row (Enter commits, Esc cancels; the input is
+> focused + selected on open). Deleting a request or an empty folder is immediate; deleting a
+> non-empty folder asks to confirm. Every op persists through the same on-disk write path as a move.
 >
 > A **workspace** is a folder on disk holding the collection tree + config. Point the app
 > at one by hand-editing `workspacePath` in that same `settings.json`; it loads on launch
@@ -100,9 +116,10 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > trailing blank row to add; trash icon removes; Headers/Params rows have a full-cell enable
 > checkbox - a disabled row is kept on disk but excluded from the sent request),
 > Auth is a type select + fields, Script is pre/post text areas. These commit **immediately on
-> blur** (or selection) via the same write path. Config can also be edited as raw JSON (a
-> pencil on each sidebar row opens a raw-JSON editor in the content area - a **folder** edits
-> its `config` block, while a **request**'s Settings tab edits the **whole request** JSON
+> blur** (or selection) via the same write path. Config can also be edited as raw JSON
+> (**Edit** in a sidebar row's right-click menu opens a raw-JSON editor in the content
+> area - a **folder** edits its `config` block, while a **request**'s Settings tab edits the
+> **whole request** JSON
 > `{name, method, url, body, config}` so everything about it lives in one place (saving a new
 > body/url/method there re-syncs the Body tab + URL bar). The raw-JSON editors have no Save
 > button - save with `Mod+S` or via the close-confirm popup (its **Save** is disabled while the

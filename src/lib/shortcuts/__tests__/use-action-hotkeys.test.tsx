@@ -139,9 +139,7 @@ describe("useActionHotkeys", () => {
     render(withProviders(<GuardedHarness />));
     await screen.findByTestId("ready");
 
-    await expect(
-      user.keyboard("{Control>}w{/Control}"),
-    ).resolves.not.toThrow();
+    await expect(user.keyboard("{Control>}w{/Control}")).resolves.not.toThrow();
     expect(closeRequest).toHaveBeenCalledTimes(1);
   });
 });

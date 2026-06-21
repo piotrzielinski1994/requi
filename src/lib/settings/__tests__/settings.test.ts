@@ -225,9 +225,9 @@ describe("mergeSettings shortcuts", () => {
 
   // AC-007 — behavior
   it("should yield an empty shortcuts map if the persisted value is not an object", () => {
-    expect(mergeSettings(DEFAULT_SETTINGS, { shortcuts: "nope" }).shortcuts).toEqual(
-      {},
-    );
+    expect(
+      mergeSettings(DEFAULT_SETTINGS, { shortcuts: "nope" }).shortcuts,
+    ).toEqual({});
   });
 
   // AC-001 — behavior

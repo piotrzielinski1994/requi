@@ -139,14 +139,15 @@ describe("WorkspaceProvider setRequestBody", () => {
     );
   });
 
-  // AC-007, TC-006 — side-effect-contract: a draft's body is editable and the draft stays disposable.
-  it("should edit a draft's body via setRequestBody and still allow closing the draft", async () => {
+  // AC-007, TC-006 — side-effect-contract: a freshly created request's body is
+  // editable via setRequestBody and its tab closes cleanly.
+  it("should edit a new request's body via setRequestBody and still allow closing its tab", async () => {
     const user = userEvent.setup();
     renderProbe("req-json-body");
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
     expect(screen.getByTestId("open-count")).toHaveTextContent("2");
-    // Draft starts with an empty body.
+    // A new request starts with an empty body.
     expect(screen.getByTestId("active-body")).toHaveTextContent("[]");
 
     await user.click(screen.getByRole("button", { name: /edit active body/i }));
@@ -156,7 +157,7 @@ describe("WorkspaceProvider setRequestBody", () => {
 
     await user.click(screen.getByRole("button", { name: /close active/i }));
 
-    // Draft is disposed; the override does not resurrect it.
+    // the tab closes; the override does not resurrect it.
     expect(screen.getByTestId("open-count")).toHaveTextContent("1");
     expect(screen.getByTestId("active-id")).toHaveTextContent("req-json-body");
   });

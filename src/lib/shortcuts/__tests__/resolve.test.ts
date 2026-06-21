@@ -21,6 +21,10 @@ const ACTION_IDS: ShortcutActionId[] = [
   "close-request",
   "close-all-requests",
   "new-request",
+  "new-folder",
+  "duplicate-request",
+  "rename-node",
+  "delete-node",
   "open-workspace",
   "send-request",
   "save-active-editor",
@@ -97,8 +101,9 @@ describe("resolveShortcuts", () => {
     const overrides = {
       "toggle-console": 42,
     } as unknown as ShortcutOverrides;
-    const def = SHORTCUT_ACTIONS.find((a) => a.id === "toggle-console")!
-      .defaultHotkey;
+    const def = SHORTCUT_ACTIONS.find(
+      (a) => a.id === "toggle-console",
+    )!.defaultHotkey;
 
     const effective = resolveShortcuts(overrides);
 
@@ -108,8 +113,9 @@ describe("resolveShortcuts", () => {
   // AC-007, E-2 — behavior
   it("should fall back to the default if an override is an invalid hotkey string", () => {
     const overrides: ShortcutOverrides = { "toggle-console": "bogus!!" };
-    const def = SHORTCUT_ACTIONS.find((a) => a.id === "toggle-console")!
-      .defaultHotkey;
+    const def = SHORTCUT_ACTIONS.find(
+      (a) => a.id === "toggle-console",
+    )!.defaultHotkey;
 
     const effective = resolveShortcuts(overrides);
 

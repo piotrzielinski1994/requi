@@ -24,7 +24,10 @@ type SettingsContextValue = {
   saveWorkspacePath: (path: string) => void;
   saveShortcut: (id: ShortcutActionId, hotkey: string) => void;
   resetShortcut: (id: ShortcutActionId) => void;
-  saveOpenTabs: (openRequestIds: string[], activeRequestId: string | null) => void;
+  saveOpenTabs: (
+    openRequestIds: string[],
+    activeRequestId: string | null,
+  ) => void;
   saveActiveEnvironment: (name: string | null) => void;
 };
 

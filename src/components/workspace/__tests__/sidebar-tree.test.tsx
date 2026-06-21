@@ -1,10 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { WorkspaceProvider } from "@/components/workspace/workspace-context";
 import { SidebarTree } from "@/components/workspace/sidebar-tree";
 import { ContentHeader } from "@/components/workspace/content-header";
+import { ToastProvider } from "@/components/ui/toast";
 import { fixtureTree } from "./fixtures";
 
 describe("SidebarTree", () => {
@@ -36,7 +43,10 @@ describe("SidebarTree", () => {
   it("should hide a folder's children when an expanded folder is clicked", async () => {
     const user = userEvent.setup();
     render(
-      <WorkspaceProvider tree={fixtureTree} initialExpandedIds={["folder-auth"]}>
+      <WorkspaceProvider
+        tree={fixtureTree}
+        initialExpandedIds={["folder-auth"]}
+      >
         <SidebarTree />
       </WorkspaceProvider>,
     );
@@ -85,8 +95,12 @@ describe("SidebarTree", () => {
     );
 
     const tree = screen.getByRole("tree", { name: /collection/i });
-    expect(within(tree).getByRole("treeitem", { name: "Auth" })).toBeInTheDocument();
-    expect(within(tree).getByRole("treeitem", { name: "OAuth" })).toBeInTheDocument();
+    expect(
+      within(tree).getByRole("treeitem", { name: "Auth" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tree).getByRole("treeitem", { name: "OAuth" }),
+    ).toBeInTheDocument();
     expect(
       within(tree).getByRole("treeitem", { name: "POST token" }),
     ).toBeInTheDocument();
@@ -134,5 +148,112 @@ describe("SidebarTree", () => {
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     expect(within(tablist).queryByRole("tab")).not.toBeInTheDocument();
+  });
+
+  // AC-002, AC-008 — render-contract: right-clicking the empty sidebar area (not a
+  // row) offers New request / New folder for creating at the workspace root.
+  it("should offer New request and New folder when the empty sidebar area is right-clicked", async () => {
+    render(
+      <ToastProvider>
+        <WorkspaceProvider tree={fixtureTree} initialExpandedIds={[]}>
+          <SidebarTree />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    // the empty-area trigger wraps the tree; right-click its container.
+    fireEvent.contextMenu(tree.parentElement as HTMLElement);
+
+    expect(
+      await screen.findByRole("menuitem", { name: /new request/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /new folder/i }),
+    ).toBeInTheDocument();
+    // no row-only actions on the empty-area menu.
+    expect(
+      screen.queryByRole("menuitem", { name: /rename/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC-008 — render-contract: right-clicking a ROW inside the full tree (a row
+  // ContextMenu nested inside the empty-area ContextMenu) shows the ROW menu
+  // (Rename/Delete), NOT the empty-area create menu - radix inner-trigger wins.
+  it("should show the row menu and not the create menu when a row is right-clicked", async () => {
+    render(
+      <ToastProvider>
+        <WorkspaceProvider tree={fixtureTree} initialExpandedIds={[]}>
+          <SidebarTree />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    fireEvent.contextMenu(
+      within(tree).getByRole("treeitem", { name: "GET profile" }),
+    );
+
+    expect(
+      await screen.findByRole("menuitem", { name: /rename/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /delete/i }),
+    ).toBeInTheDocument();
+    // the empty-area create items must NOT leak in from the outer menu.
+    expect(
+      screen.queryByRole("menuitem", { name: /new request/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /new folder/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // AC-002 — behavior: choosing "New folder" from the empty-area menu adds a
+  // root-level folder.
+  it("should create a root folder when New folder is chosen from the empty-area menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <WorkspaceProvider tree={fixtureTree} initialExpandedIds={[]}>
+          <SidebarTree />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    const rootFoldersBefore = within(tree).getAllByRole("treeitem").length;
+
+    fireEvent.contextMenu(tree.parentElement as HTMLElement);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /new folder/i }),
+    );
+
+    // a new top-level row appears (the freshly created folder, in rename mode).
+    expect(within(tree).getAllByRole("treeitem").length).toBeGreaterThan(
+      rootFoldersBefore,
+    );
+  });
+
+  // AC-003 — behavior: a freshly created folder's inline rename input is FOCUSED
+  // so the name can be typed immediately (radix menu close must not keep focus).
+  it("should focus the rename input of the folder created from the empty-area menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <WorkspaceProvider tree={fixtureTree} initialExpandedIds={[]}>
+          <SidebarTree />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    fireEvent.contextMenu(tree.parentElement as HTMLElement);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /new folder/i }),
+    );
+
+    const input = await screen.findByRole("textbox");
+    await waitFor(() => expect(input).toHaveFocus());
   });
 });

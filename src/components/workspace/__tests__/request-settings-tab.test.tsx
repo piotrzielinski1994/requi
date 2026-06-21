@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 import { forceLinting, diagnosticCount } from "@codemirror/lint";
@@ -218,7 +224,9 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(fullRequestDoc({ body: { type: "json", payload: { from: "settings" } } }));
+    setDoc(
+      fullRequestDoc({ body: { type: "json", payload: { from: "settings" } } }),
+    );
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     // switch to the Body tab; its CM doc reflects the saved body (pretty-printed).
@@ -232,13 +240,61 @@ describe("RequestPane Settings sub-tab", () => {
   // false -> the close popup disables its Save; parseRequest rejects the content).
   const goodBody = { type: "text", payload: "" };
   it.each([
-    ["a bare old-shape config object", JSON.stringify({ variables: { a: "b" } })],
+    [
+      "a bare old-shape config object",
+      JSON.stringify({ variables: { a: "b" } }),
+    ],
     ["an array", "[1,2,3]"],
-    ["a non-string url", JSON.stringify({ name: "R", method: "GET", url: 5, body: goodBody, config: {} })],
-    ["an invalid method", JSON.stringify({ name: "R", method: "FETCH", url: "u", body: goodBody, config: {} })],
-    ["a non-object config", JSON.stringify({ name: "R", method: "GET", url: "u", body: goodBody, config: 7 })],
-    ["a bare-string body (not a StoredBody)", JSON.stringify({ name: "R", method: "GET", url: "u", body: "raw", config: {} })],
-    ["a body with an unknown type", JSON.stringify({ name: "R", method: "GET", url: "u", body: { type: "xml", payload: "" }, config: {} })],
+    [
+      "a non-string url",
+      JSON.stringify({
+        name: "R",
+        method: "GET",
+        url: 5,
+        body: goodBody,
+        config: {},
+      }),
+    ],
+    [
+      "an invalid method",
+      JSON.stringify({
+        name: "R",
+        method: "FETCH",
+        url: "u",
+        body: goodBody,
+        config: {},
+      }),
+    ],
+    [
+      "a non-object config",
+      JSON.stringify({
+        name: "R",
+        method: "GET",
+        url: "u",
+        body: goodBody,
+        config: 7,
+      }),
+    ],
+    [
+      "a bare-string body (not a StoredBody)",
+      JSON.stringify({
+        name: "R",
+        method: "GET",
+        url: "u",
+        body: "raw",
+        config: {},
+      }),
+    ],
+    [
+      "a body with an unknown type",
+      JSON.stringify({
+        name: "R",
+        method: "GET",
+        url: "u",
+        body: { type: "xml", payload: "" },
+        config: {},
+      }),
+    ],
     ["malformed JSON", "{ not json"],
   ])("should block saving if the Settings JSON is %s", async (_label, doc) => {
     const user = userEvent.setup();
@@ -369,10 +425,10 @@ describe("RequestPane Settings sub-tab", () => {
   });
 });
 
-describe("Request pencil opens the Settings sub-tab", () => {
-  // behavior: clicking a request row's edit-config control opens the request
+describe("Request context-menu Edit config opens the Settings sub-tab", () => {
+  // behavior: the request row's "Edit config" context-menu item opens the request
   // and activates its Settings sub-tab (NO separate top-level editor tab).
-  it("should activate the request Settings sub-tab when the row edit-config control is clicked", async () => {
+  it("should activate the request Settings sub-tab when Edit config is chosen from the row menu", async () => {
     const user = userEvent.setup();
     render(
       <WorkspaceProvider tree={tree} httpClient={createFakeHttpClient()}>
@@ -383,7 +439,10 @@ describe("Request pencil opens the Settings sub-tab", () => {
 
     const treeEl = screen.getByRole("tree", { name: /collection/i });
     const row = within(treeEl).getByRole("treeitem", { name: /Req/i });
-    await user.click(within(row).getByRole("button", { name: /edit config/i }));
+    fireEvent.contextMenu(row);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /request sections/i });
     expect(

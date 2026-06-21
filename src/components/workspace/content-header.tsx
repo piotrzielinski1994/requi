@@ -60,8 +60,14 @@ function RequestTab({
   onActivate: () => void;
   onClose: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
   return (
     <div
@@ -129,8 +135,11 @@ export function ContentHeader() {
     isSettingsOpen,
     isSettingsActive,
     editTarget,
+    isEditorActive,
     tree,
     closeEditor,
+    openConfigEditor,
+    openEnvEditor,
     openSettings,
     closeSettings,
     newRequest,
@@ -182,7 +191,7 @@ export function ContentHeader() {
                   isActive={
                     id === activeRequestId &&
                     !isSettingsActive &&
-                    editTarget === null
+                    !isEditorActive
                   }
                   isDirty={dirtyRequestIds.has(id)}
                   onActivate={() => setActiveRequest(id)}
@@ -193,11 +202,27 @@ export function ContentHeader() {
           </SortableContext>
         </DndContext>
         {editTarget !== null && (
-          <div className="-mb-px flex h-[calc(100%+1px)] items-center gap-1 border-r bg-accent px-3 text-sm shadow-[inset_0_-2px_0_0_var(--primary)]">
-            <span
+          <div
+            className={cn(
+              "flex h-full items-center gap-1 border-r px-3 text-sm hover:bg-accent",
+              isEditorActive
+                ? "-mb-px h-[calc(100%+1px)] bg-accent shadow-[inset_0_-2px_0_0_var(--primary)]"
+                : "bg-transparent",
+            )}
+          >
+            <button
+              type="button"
               role="tab"
-              aria-selected="true"
-              className="flex items-center gap-1.5 truncate text-foreground"
+              aria-selected={isEditorActive}
+              onClick={() =>
+                editTarget.kind === "env"
+                  ? openEnvEditor()
+                  : openConfigEditor(editTarget.id)
+              }
+              className={cn(
+                "flex items-center gap-1.5 truncate",
+                isEditorActive ? "text-foreground" : "text-muted-foreground",
+              )}
             >
               <FileCog aria-hidden="true" className="size-3.5 shrink-0" />
               {editorDirty && (
@@ -207,7 +232,7 @@ export function ContentHeader() {
                 />
               )}
               {editorTabLabel(editTarget, tree)}
-            </span>
+            </button>
             <button
               type="button"
               aria-label={

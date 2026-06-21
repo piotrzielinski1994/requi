@@ -64,10 +64,7 @@ function SelectorHarness({ pick }: { pick?: string | null }) {
   return (
     <div>
       <EnvSelector />
-      <button
-        type="button"
-        onClick={() => setActiveEnvironment(pick ?? null)}
-      >
+      <button type="button" onClick={() => setActiveEnvironment(pick ?? null)}>
         pick env
       </button>
     </div>
@@ -127,9 +124,9 @@ describe("EnvSelector - selection", () => {
 
     await user.click(screen.getByRole("button", { name: /pick env/i }));
 
-    expect(screen.getByRole("combobox", { name: /environment/i })).toHaveTextContent(
-      "local",
-    );
+    expect(
+      screen.getByRole("combobox", { name: /environment/i }),
+    ).toHaveTextContent("local");
   });
 
   // AC-003 - side-effect-contract: switching the env notifies onActiveEnvironmentChange
@@ -137,10 +134,7 @@ describe("EnvSelector - selection", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
-      <WorkspaceProvider
-        tree={envTree}
-        onActiveEnvironmentChange={onChange}
-      >
+      <WorkspaceProvider tree={envTree} onActiveEnvironmentChange={onChange}>
         <SelectorHarness pick="staging" />
       </WorkspaceProvider>,
     );

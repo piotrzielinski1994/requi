@@ -84,8 +84,12 @@ describe("WorkspaceLoader", () => {
 
     expect(await screen.findByText(/no workspace/i)).toBeInTheDocument();
     expect(screen.queryByText("Billing")).not.toBeInTheDocument();
-    expect(screen.getByRole("tree", { name: /collection/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /console/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tree", { name: /collection/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /console/i }),
+    ).toBeInTheDocument();
   });
 
   // AC-004 - behavior
@@ -93,8 +97,12 @@ describe("WorkspaceLoader", () => {
     renderLoader("/ws/missing", {});
 
     expect(await screen.findByText(/no workspace/i)).toBeInTheDocument();
-    expect(screen.getByRole("tree", { name: /collection/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /console/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tree", { name: /collection/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /console/i }),
+    ).toBeInTheDocument();
   });
 
   // AC-004, E-6 - behavior
@@ -103,8 +111,12 @@ describe("WorkspaceLoader", () => {
 
     expect(await screen.findByText(/no workspace/i)).toBeInTheDocument();
     expect(screen.queryByText("Billing")).not.toBeInTheDocument();
-    expect(screen.getByRole("tree", { name: /collection/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /console/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tree", { name: /collection/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /console/i }),
+    ).toBeInTheDocument();
   });
 
   // AC-004, TC-004 - behavior: settings opens as content in the empty shell, then closes.
@@ -118,7 +130,9 @@ describe("WorkspaceLoader", () => {
     expect(
       await screen.findByRole("heading", { name: /keyboard shortcuts/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /console/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /console/i }),
+    ).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     await waitFor(() => {

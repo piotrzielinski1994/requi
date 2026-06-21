@@ -51,7 +51,10 @@ function SendButton() {
   );
 }
 
-function renderPane(client: FakeHttpClient, initialActiveRequestId = "req-token") {
+function renderPane(
+  client: FakeHttpClient,
+  initialActiveRequestId = "req-token",
+) {
   return render(
     <WorkspaceProvider
       tree={fixtureTree}
@@ -170,24 +173,24 @@ describe("ResponsePane - idle fallback", () => {
         httpClient={client}
         initialExpandedIds={["folder-auth", "folder-oauth"]}
       >
-        <NewDraftButton />
+        <NewRequestButton />
         <ResponsePane />
       </WorkspaceProvider>,
     );
 
     return user
-      .click(screen.getByRole("button", { name: /new draft/i }))
+      .click(screen.getByRole("button", { name: /new request/i }))
       .then(() => {
         expect(screen.getByText(/no response/i)).toBeInTheDocument();
       });
   });
 });
 
-function NewDraftButton() {
+function NewRequestButton() {
   const { newRequest } = useWorkspace();
   return (
     <button type="button" onClick={() => newRequest()}>
-      new draft
+      new request
     </button>
   );
 }

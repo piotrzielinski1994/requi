@@ -45,7 +45,10 @@ function CloseDriver() {
       >
         dirty B
       </button>
-      <button type="button" onClick={() => requestCloseRequest("req-json-body")}>
+      <button
+        type="button"
+        onClick={() => requestCloseRequest("req-json-body")}
+      >
         close-one A
       </button>
       <button type="button" onClick={() => requestCloseAll()}>

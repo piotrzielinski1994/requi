@@ -48,7 +48,10 @@ export const darculaHighlight = HighlightStyle.define([
   { tag: [t.keyword, t.bool, t.null], color: darcula.keyword },
   { tag: [t.string, t.special(t.string)], color: darcula.string },
   { tag: [t.number], color: darcula.number },
-  { tag: [t.propertyName, t.definition(t.propertyName)], color: darcula.property },
+  {
+    tag: [t.propertyName, t.definition(t.propertyName)],
+    color: darcula.property,
+  },
   { tag: [t.comment], color: darcula.comment, fontStyle: "italic" },
   { tag: [t.invalid], color: darcula.invalid },
 ]);
@@ -57,8 +60,7 @@ export const darculaHighlight = HighlightStyle.define([
 // body is a valid state (no body), so suppress diagnostics until something is typed.
 export function emptyTolerantJsonLinter(): (view: EditorView) => Diagnostic[] {
   const lint = jsonParseLinter();
-  return (view) =>
-    view.state.doc.toString().trim() === "" ? [] : lint(view);
+  return (view) => (view.state.doc.toString().trim() === "" ? [] : lint(view));
 }
 
 // Read-only JSON viewer extensions (no editing, no linter, no bracket-closing) -
