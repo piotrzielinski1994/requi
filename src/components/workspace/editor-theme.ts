@@ -37,6 +37,8 @@ export const darculaChrome = EditorView.theme(
       color: darcula.gutterForeground,
       border: "none",
     },
+    // Keep the fold gutter clickable but never show its arrows (incl. on hover).
+    ".cm-foldGutter .cm-gutterElement": { opacity: "0" },
     ".cm-scroller": {
       fontFamily: "var(--font-mono, ui-monospace, monospace)",
     },

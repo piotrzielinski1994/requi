@@ -12,6 +12,7 @@ import {
 } from "@/components/workspace/command-palette";
 import { CloseConfirmDialog } from "@/components/workspace/close-confirm-dialog";
 import { DeleteConfirmDialog } from "@/components/workspace/delete-confirm-dialog";
+import { CurlImportDialog } from "@/components/workspace/curl-import-dialog";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useSettings } from "@/lib/settings/settings-context";
 import { useActionHotkeys } from "@/lib/shortcuts/use-action-hotkeys";
@@ -50,6 +51,8 @@ export function Main({ picker }: { picker?: FolderPicker }) {
     sendRequest,
     saveActiveEditor,
     saveActiveRequest,
+    copyAsCurl,
+    openCurlImport,
   } = useWorkspace();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
@@ -145,6 +148,8 @@ export function Main({ picker }: { picker?: FolderPicker }) {
         saveActiveRequest();
       }
     },
+    "copy-as-curl": copyAsCurl,
+    "import-curl": openCurlImport,
   };
 
   useActionHotkeys({
@@ -174,6 +179,7 @@ export function Main({ picker }: { picker?: FolderPicker }) {
       />
       <CloseConfirmDialog />
       <DeleteConfirmDialog />
+      <CurlImportDialog />
     </>
   );
 

@@ -99,4 +99,22 @@ describe("BodyEditor", () => {
 
     expect(diagnosticCount(view.state)).toBe(0);
   });
+
+  // behavior: the editor shows NO line-number gutter.
+  it("should not render a line-number gutter", () => {
+    const { container } = render(
+      <BodyEditor value={'{\n  "a": 1\n}'} onChange={() => {}} />,
+    );
+
+    expect(container.querySelector(".cm-lineNumbers")).toBeNull();
+  });
+
+  // behavior: the editor keeps the fold gutter (collapse/expand blocks).
+  it("should render a fold gutter for collapsing blocks", () => {
+    const { container } = render(
+      <BodyEditor value={'{\n  "a": 1\n}'} onChange={() => {}} />,
+    );
+
+    expect(container.querySelector(".cm-foldGutter")).not.toBeNull();
+  });
 });

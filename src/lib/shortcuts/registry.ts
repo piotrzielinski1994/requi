@@ -15,6 +15,8 @@ export type ShortcutActionId =
   | "open-workspace"
   | "send-request"
   | "save-active-editor"
+  | "copy-as-curl"
+  | "import-curl"
   | "open-command-palette";
 
 export type ShortcutAction = {
@@ -122,6 +124,18 @@ export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = [
     name: "Save",
     description: "Save the active config or .env editor.",
     defaultHotkey: "Mod+S",
+  },
+  {
+    id: "copy-as-curl",
+    name: "Copy as cURL",
+    description: "Copy the active request to the clipboard as a curl command.",
+    defaultHotkey: "Mod+Shift+C",
+  },
+  {
+    id: "import-curl",
+    name: "Import cURL",
+    description: "Paste a curl command to create a new request.",
+    defaultHotkey: "Mod+Shift+I",
   },
   {
     id: "open-command-palette",

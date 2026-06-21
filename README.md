@@ -83,7 +83,8 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > open settings `Mod+Shift+S`, close settings `Esc`, toggle console `Mod+J`, toggle sidebar
 > `Mod+B`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, close all
 > request tabs `Mod+Shift+W`, new request `Mod+T`, open workspace `Mod+O`, send request
-> `Mod+Enter`, command palette `Mod+K` (`Mod` = Cmd on macOS, Ctrl
+> `Mod+Enter`, copy as cURL `Mod+Shift+C`, import cURL `Mod+Shift+I`, command palette `Mod+K`
+> (`Mod` = Cmd on macOS, Ctrl
 > elsewhere). The command palette is an overlay listing every wired action with its shortcut;
 > type to filter, arrow to move, Enter (or click) to run, Esc to close. Settings open as a
 > tab inside the workspace (sidebar + console stay visible); `Mod+Shift+S` opens/activates it,
@@ -114,6 +115,15 @@ Rust backend tests: `cd src-tauri && cargo test`.
 > URL edit. Rename is an inline edit in the row (Enter commits, Esc cancels; the input is
 > focused + selected on open). Deleting a request or an empty folder is immediate; deleting a
 > non-empty folder asks to confirm. Every op persists through the same on-disk write path as a move.
+>
+> **cURL bridges** (command palette + shortcuts): **Copy as cURL** (`Mod+Shift+C`) writes the
+> active request to the clipboard as a runnable `curl` command - the *resolved wire* form
+> (`{{vars}}` substituted, query params appended, auth as an `Authorization` header, body
+> encoded + `Content-Type` set), so it pastes-and-runs (and may embed secrets, like the
+> plaintext workspace). **Import cURL** (`Mod+Shift+I`) opens a paste dialog; the pasted command
+> is parsed (method, url, `-H` headers, `-d`/`--data*` body, `-u` basic auth, `-b` cookie;
+> unknown flags ignored) into a **new** request node placed relative to the tree selection and
+> persisted - it never overwrites the active request.
 >
 > A **workspace** is a folder on disk holding the collection tree + config. Point the app
 > at one by hand-editing `workspacePath` in that same `settings.json`; it loads on launch

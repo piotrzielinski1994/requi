@@ -23,3 +23,17 @@ export function deriveRequestName(url: string): string {
   }
   return afterPrefix.slice(slashIndex);
 }
+
+// A unique default name for a new request: "untitled", or "untitled-<n>" with
+// the lowest free index when earlier untitled names are already taken.
+export function untitledName(existingNames: string[]): string {
+  const taken = new Set(existingNames);
+  if (!taken.has("untitled")) {
+    return "untitled";
+  }
+  let index = 2;
+  while (taken.has(`untitled-${index}`)) {
+    index += 1;
+  }
+  return `untitled-${index}`;
+}

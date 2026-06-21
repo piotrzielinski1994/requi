@@ -16,7 +16,7 @@ export function JsonViewer({ text }: { text: string }) {
       theme="none"
       editable={false}
       extensions={jsonViewerExtensions}
-      basicSetup={{ lineNumbers: false, foldGutter: false }}
+      basicSetup={{ lineNumbers: false, foldGutter: true }}
       height="100%"
       className="h-full text-xs"
     />

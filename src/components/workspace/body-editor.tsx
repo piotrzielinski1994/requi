@@ -2,7 +2,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
 import { closeBrackets } from "@codemirror/autocomplete";
 import { syntaxHighlighting } from "@codemirror/language";
-import { linter, lintGutter } from "@codemirror/lint";
+import { linter } from "@codemirror/lint";
 import {
   darculaChrome,
   darculaHighlight,
@@ -13,7 +13,6 @@ const extensions = [
   json(),
   closeBrackets(),
   linter(emptyTolerantJsonLinter()),
-  lintGutter(),
   darculaChrome,
   syntaxHighlighting(darculaHighlight),
 ];
@@ -30,6 +29,7 @@ export function BodyEditor({ value, onChange }: BodyEditorProps) {
       onChange={onChange}
       theme="none"
       extensions={extensions}
+      basicSetup={{ lineNumbers: false }}
       height="100%"
       className="h-full text-xs"
     />

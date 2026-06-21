@@ -1,117 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/toast";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import {
-  resolveTokenPreview,
-  type TokenPreview,
-} from "@/components/workspace/url-token";
+import { TokenHighlight } from "@/components/workspace/var-token";
 import type { EffectiveConfig } from "@/lib/workspace/resolve";
 import type { HttpMethod } from "@/components/workspace/mock-data";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
-
-const URL_TOKEN = /(\{\{[^}]+\}\}|:[A-Za-z_][A-Za-z0-9_]*)/g;
-
-function TokenValueEditor({ preview }: { preview: TokenPreview }) {
-  const { setTokenValue } = useWorkspace();
-  const { show } = useToast();
-  const [draft, setDraft] = useState(preview.rawValue);
-
-  const commit = () => {
-    if (draft !== preview.rawValue) {
-      setTokenValue(preview.target, draft);
-    }
-  };
-
-  return (
-    <div className="flex items-stretch">
-      <Input
-        aria-label="Value"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            commit();
-            (event.target as HTMLInputElement).blur();
-          }
-        }}
-        className="h-9 flex-1 rounded-none border-0 bg-transparent font-mono text-xs shadow-none focus-visible:ring-0"
-      />
-      <button
-        type="button"
-        aria-label="Copy value"
-        onClick={() => {
-          navigator.clipboard?.writeText(draft);
-          show("Copied to clipboard");
-        }}
-        className="flex shrink-0 items-center border-l px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-      >
-        <Copy className="size-3.5" />
-      </button>
-    </div>
-  );
-}
-
-function VarTokenChip({
-  token,
-  name,
-  effective,
-  processEnv,
-  environment,
-}: {
-  token: string;
-  name: string;
-  effective: EffectiveConfig | null;
-  processEnv: Record<string, string>;
-  environment: string | null;
-}) {
-  const preview = effective
-    ? resolveTokenPreview(name, effective, processEnv, environment ?? undefined)
-    : null;
-  const colorClass = !preview
-    ? "text-red-500 dark:text-red-400"
-    : preview.kind === "dotenv"
-      ? "text-amber-500 dark:text-amber-400"
-      : preview.kind === "environment"
-        ? "text-sky-600 dark:text-sky-400"
-        : "text-emerald-500 dark:text-emerald-400";
-
-  return (
-    <HoverCard openDelay={80} closeDelay={40}>
-      <HoverCardTrigger asChild>
-        <span className={cn("pointer-events-auto cursor-default", colorClass)}>
-          {token}
-        </span>
-      </HoverCardTrigger>
-      <HoverCardContent align="start" className="w-72 overflow-hidden p-0">
-        {preview ? (
-          <TokenValueEditor key={preview.rawValue} preview={preview} />
-        ) : (
-          <span className="block p-3 font-mono text-xs text-muted-foreground">
-            unresolved
-          </span>
-        )}
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
 
 function UrlHighlight({
   url,
@@ -124,31 +26,14 @@ function UrlHighlight({
   processEnv: Record<string, string>;
   environment: string | null;
 }) {
-  const parts = url.split(URL_TOKEN);
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center truncate px-3 font-mono text-xs whitespace-pre">
-      {parts.map((part, index) => {
-        if (part.startsWith("{{")) {
-          return (
-            <VarTokenChip
-              key={index}
-              token={part}
-              name={part.slice(2, -2).trim()}
-              effective={effective}
-              processEnv={processEnv}
-              environment={environment}
-            />
-          );
-        }
-        if (part.startsWith(":")) {
-          return (
-            <span key={index} className="text-sky-600 dark:text-sky-400">
-              {part}
-            </span>
-          );
-        }
-        return <span key={index}>{part}</span>;
-      })}
+      <TokenHighlight
+        text={url}
+        effective={effective}
+        processEnv={processEnv}
+        environment={environment}
+      />
     </div>
   );
 }

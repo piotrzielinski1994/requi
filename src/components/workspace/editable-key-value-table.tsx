@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TokenHighlight } from "@/components/workspace/var-token";
 import type { KeyValue } from "@/components/workspace/mock-data";
+import type { EffectiveConfig } from "@/lib/workspace/resolve";
 
 const BLANK: KeyValue = { key: "", value: "" };
+
+// Resolution context for {{var}} highlighting in value cells. `effective` null
+// (e.g. a folder pane, no single resolution) -> tokens get a flat color, no hover.
+export type TokenHighlightContext = {
+  effective: EffectiveConfig | null;
+  processEnv: Record<string, string>;
+  environment: string | null;
+};
 
 const dropBlankKeys = (rows: KeyValue[]) =>
   rows.filter((row) => row.key.trim() !== "");
@@ -21,12 +31,14 @@ export function EditableKeyValueTable({
   withToggle = false,
   keyPlaceholder = "key",
   valuePlaceholder = "value",
+  highlight,
 }: {
   rows: KeyValue[];
   onChange: (rows: KeyValue[]) => void;
   withToggle?: boolean;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  highlight?: TokenHighlightContext;
 }) {
   const [draft, setDraft] = useState<KeyValue[]>(rows);
   const [isDirty, setIsDirty] = useState(false);
@@ -143,7 +155,7 @@ export function EditableKeyValueTable({
                 className={input}
               />
             </div>
-            <div className={cell}>
+            <div className={cn(cell, "relative")}>
               <input
                 aria-label={`${valuePlaceholder} ${index + 1}`}
                 value={row.value}
@@ -154,8 +166,21 @@ export function EditableKeyValueTable({
                   editCell(index, { value: event.target.value })
                 }
                 onBlur={flush}
-                className={input}
+                className={cn(
+                  input,
+                  highlight && "text-transparent caret-foreground",
+                )}
               />
+              {highlight && row.value !== "" && (
+                <div className="pointer-events-none absolute inset-0 flex items-center truncate px-2 font-mono text-xs whitespace-pre">
+                  <TokenHighlight
+                    text={row.value}
+                    effective={highlight.effective}
+                    processEnv={highlight.processEnv}
+                    environment={highlight.environment}
+                  />
+                </div>
+              )}
             </div>
             <div className={cn(cell, "flex items-center justify-center")}>
               {!isBlankRow && (
