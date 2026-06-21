@@ -54,9 +54,7 @@ describe("ShortcutsSection", () => {
   it("should show an Open command palette row in the shortcuts list", async () => {
     renderSection();
 
-    expect(
-      await screen.findByText("Open command palette"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Open command palette")).toBeInTheDocument();
   });
 
   // AC-006 — behavior

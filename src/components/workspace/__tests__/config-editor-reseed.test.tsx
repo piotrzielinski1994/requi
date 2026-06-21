@@ -33,7 +33,10 @@ describe("RequestSettingsForm re-seed", () => {
   // remount. It must re-seed from the new request on the same mount.
   it("should reflect the request's new config without a remount", () => {
     const { rerender } = render(
-      <WorkspaceProvider tree={[makeRequest({})]} initialActiveRequestId="req-1">
+      <WorkspaceProvider
+        tree={[makeRequest({})]}
+        initialActiveRequestId="req-1"
+      >
         <RequestSettingsForm request={makeRequest({})} />
       </WorkspaceProvider>,
     );
@@ -41,7 +44,10 @@ describe("RequestSettingsForm re-seed", () => {
     expect(editorText()).not.toContain("X-Seeded");
 
     rerender(
-      <WorkspaceProvider tree={[makeRequest({})]} initialActiveRequestId="req-1">
+      <WorkspaceProvider
+        tree={[makeRequest({})]}
+        initialActiveRequestId="req-1"
+      >
         <RequestSettingsForm
           request={makeRequest({ headers: [{ key: "X-Seeded", value: "1" }] })}
         />

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import {
@@ -22,7 +22,10 @@ function OpenEnvButton() {
 function EditUrlButton({ id }: { id: string }) {
   const { setRequestUrl } = useWorkspace();
   return (
-    <button type="button" onClick={() => setRequestUrl(id, "https://edited.test")}>
+    <button
+      type="button"
+      onClick={() => setRequestUrl(id, "https://edited.test")}
+    >
       edit url
     </button>
   );
@@ -45,7 +48,9 @@ describe("ContentHeader", () => {
 
     // Open a second tab (token) by selecting it in the tree; profile is already open+active.
     const tree = screen.getByRole("tree", { name: /collection/i });
-    await user.click(within(tree).getByRole("treeitem", { name: "POST token" }));
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     const profileTab = within(tablist).getByRole("tab", { name: "profile" });
@@ -76,11 +81,17 @@ describe("ContentHeader", () => {
 
     // Open a second tab so two are present.
     const tree = screen.getByRole("tree", { name: /collection/i });
-    await user.click(within(tree).getByRole("treeitem", { name: "POST token" }));
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
-    expect(within(tablist).getByRole("tab", { name: "profile" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "token" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "profile" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "token" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close token" }));
 
@@ -109,11 +120,17 @@ describe("ContentHeader", () => {
     const tree = screen.getByRole("tree", { name: /collection/i });
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
 
-    expect(within(tablist).getAllByRole("tab", { name: "token" })).toHaveLength(1);
+    expect(within(tablist).getAllByRole("tab", { name: "token" })).toHaveLength(
+      1,
+    );
 
-    await user.click(within(tree).getByRole("treeitem", { name: "POST token" }));
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    );
 
-    expect(within(tablist).getAllByRole("tab", { name: "token" })).toHaveLength(1);
+    expect(within(tablist).getAllByRole("tab", { name: "token" })).toHaveLength(
+      1,
+    );
   });
 
   // AC-007, E-4 — behavior
@@ -131,7 +148,9 @@ describe("ContentHeader", () => {
     );
 
     const tree = screen.getByRole("tree", { name: /collection/i });
-    await user.click(within(tree).getByRole("treeitem", { name: "POST token" }));
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     // token is now active (last selected); close it -> profile becomes active
@@ -156,7 +175,9 @@ describe("ContentHeader", () => {
     );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
-    expect(within(tablist).getByRole("tab", { name: "profile" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "profile" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close profile" }));
 
@@ -184,15 +205,20 @@ describe("ContentHeader", () => {
 
     const tree = screen.getByRole("tree", { name: /collection/i });
     const folderRow = within(tree).getByRole("treeitem", { name: "Users" });
-    await user.click(within(folderRow).getByRole("button", { name: /edit config/i }));
+    fireEvent.contextMenu(folderRow);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
     expect(
       within(tablist).getByRole("tab", { name: "profile" }),
     ).toHaveAttribute("aria-selected", "false");
   });
 
-  // behavior: activating a request tab leaves the folder config editor.
-  it("should leave the folder config editor when a request tab is clicked", async () => {
+  // behavior: activating a request tab DEACTIVATES the folder config editor but
+  // KEEPS its tab open (tabs never self-close - only an explicit close removes a
+  // tab), mirroring how the Settings tab stays open when a request is activated.
+  it("should keep the folder config editor tab open (just deactivated) when a request tab is clicked", async () => {
     const user = userEvent.setup();
     render(
       <WorkspaceProvider
@@ -207,17 +233,24 @@ describe("ContentHeader", () => {
 
     const tree = screen.getByRole("tree", { name: /collection/i });
     const folderRow = within(tree).getByRole("treeitem", { name: "Users" });
-    await user.click(within(folderRow).getByRole("button", { name: /edit config/i }));
+    fireEvent.contextMenu(folderRow);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
+    const editorTab = within(tablist).getByRole("tab", { name: /config/i });
+    expect(editorTab).toHaveAttribute("aria-selected", "true");
+
     await user.click(within(tablist).getByRole("tab", { name: "profile" }));
 
     expect(
       within(tablist).getByRole("tab", { name: "profile" }),
     ).toHaveAttribute("aria-selected", "true");
+    // the editor tab is still present, just no longer active.
     expect(
-      within(tablist).queryByRole("tab", { name: /config/i }),
-    ).not.toBeInTheDocument();
+      within(tablist).getByRole("tab", { name: /config/i }),
+    ).toHaveAttribute("aria-selected", "false");
   });
 
   // behavior: opening a folder config editor adds its own tab in the tab strip.
@@ -236,11 +269,52 @@ describe("ContentHeader", () => {
 
     const tree = screen.getByRole("tree", { name: /collection/i });
     const folderRow = within(tree).getByRole("treeitem", { name: "Users" });
-    await user.click(within(folderRow).getByRole("button", { name: /edit config/i }));
+    fireEvent.contextMenu(folderRow);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     const editorTab = within(tablist).getByRole("tab", { name: /config/i });
     expect(editorTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  // behavior: a deactivated editor tab can be re-activated by clicking it back
+  // (it stayed open in the background while a request was active).
+  it("should re-activate the config editor tab when it is clicked after a request tab", async () => {
+    const user = userEvent.setup();
+    render(
+      <WorkspaceProvider
+        tree={fixtureTree}
+        initialExpandedIds={["folder-auth", "folder-oauth"]}
+        initialActiveRequestId="req-profile"
+      >
+        <SidebarTree />
+        <ContentHeader />
+      </WorkspaceProvider>,
+    );
+
+    const tree = screen.getByRole("tree", { name: /collection/i });
+    fireEvent.contextMenu(
+      within(tree).getByRole("treeitem", { name: "Users" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: /^edit$/i }));
+
+    const tablist = screen.getByRole("tablist", { name: /open requests/i });
+    // activate the request tab -> editor deactivates but its tab remains.
+    await user.click(within(tablist).getByRole("tab", { name: "profile" }));
+    expect(
+      within(tablist).getByRole("tab", { name: /config/i }),
+    ).toHaveAttribute("aria-selected", "false");
+
+    // click the editor tab back -> it re-activates.
+    await user.click(within(tablist).getByRole("tab", { name: /config/i }));
+    expect(
+      within(tablist).getByRole("tab", { name: /config/i }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(tablist).getByRole("tab", { name: "profile" }),
+    ).toHaveAttribute("aria-selected", "false");
   });
 
   // behavior: the editor tab has a close control that returns to the request view.
@@ -259,9 +333,14 @@ describe("ContentHeader", () => {
 
     const tree = screen.getByRole("tree", { name: /collection/i });
     const folderRow = within(tree).getByRole("treeitem", { name: "Users" });
-    await user.click(within(folderRow).getByRole("button", { name: /edit config/i }));
+    fireEvent.contextMenu(folderRow);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
-    await user.click(screen.getByRole("button", { name: /close config editor/i }));
+    await user.click(
+      screen.getByRole("button", { name: /close config editor/i }),
+    );
 
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     expect(

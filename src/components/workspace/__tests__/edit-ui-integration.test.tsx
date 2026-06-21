@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  within,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import {
@@ -69,7 +75,11 @@ describe("Sidebar row edit-config control", () => {
     const tree = await screen.findByRole("tree", { name: /collection/i });
     const reqRow = within(tree).getByRole("treeitem", { name: /Req/i });
 
-    await user.click(within(reqRow).getByRole("button", { name: /edit config|config/i }));
+    // config editing lives in the row context menu now (no hover pencil).
+    fireEvent.contextMenu(reqRow);
+    await user.click(
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
+    );
 
     // The editor seeds with the node's config JSON; assert the live CM doc shows it.
     await waitFor(() => {
@@ -106,9 +116,7 @@ type EditSurface = ReturnType<typeof useWorkspace> & {
 function EditTargetProbe() {
   const ctx = useWorkspace() as EditSurface;
   return (
-    <span data-testid="has-edit-target">
-      {ctx.editTarget ? "yes" : "no"}
-    </span>
+    <span data-testid="has-edit-target">{ctx.editTarget ? "yes" : "no"}</span>
   );
 }
 
@@ -130,8 +138,9 @@ describe("TreeRow edit-config control wiring", () => {
     expect(screen.getByTestId("has-edit-target")).toHaveTextContent("no");
 
     const folderRow = screen.getByRole("treeitem", { name: /Folder/i });
+    fireEvent.contextMenu(folderRow);
     await user.click(
-      within(folderRow).getByRole("button", { name: /edit config|config/i }),
+      await screen.findByRole("menuitem", { name: /^edit$/i }),
     );
 
     expect(screen.getByTestId("has-edit-target")).toHaveTextContent("yes");

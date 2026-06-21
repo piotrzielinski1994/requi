@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { resolveConfig } from "@/lib/workspace/resolve";
-import type {
-  FolderNode,
-  RequestNode,
-  TreeNode,
-} from "@/lib/workspace/model";
+import type { FolderNode, RequestNode, TreeNode } from "@/lib/workspace/model";
 
 const request = (
   id: string,

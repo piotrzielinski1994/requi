@@ -31,11 +31,21 @@ describe("RequestPane", () => {
     );
 
     const tablist = screen.getByRole("tablist", { name: /request sections/i });
-    expect(within(tablist).getByRole("tab", { name: "Auth" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "Headers" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "Params" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "Body" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "Script" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Auth" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Headers" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Params" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Body" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Script" }),
+    ).toBeInTheDocument();
 
     // Params panel visible by default: shows the active request's params as inputs.
     expect(screen.getByDisplayValue("grant_type")).toBeInTheDocument();
@@ -85,7 +95,9 @@ describe("RequestPane", () => {
     const tablist = screen.getByRole("tablist", { name: /request sections/i });
     await user.click(within(tablist).getByRole("tab", { name: "Auth" }));
 
-    expect(screen.getByRole("textbox", { name: /username/i })).toHaveValue("admin");
+    expect(screen.getByRole("textbox", { name: /username/i })).toHaveValue(
+      "admin",
+    );
     expect(screen.getByLabelText("Password", { exact: true })).toHaveValue(
       "s3cret",
     );
@@ -138,7 +150,10 @@ describe("RequestPane", () => {
   it("should render an editable code editor (not a read-only pre) on the Body tab", async () => {
     const user = userEvent.setup();
     render(
-      <WorkspaceProvider tree={bodyFixtureTree} initialActiveRequestId="req-json-body">
+      <WorkspaceProvider
+        tree={bodyFixtureTree}
+        initialActiveRequestId="req-json-body"
+      >
         <RequestPane />
       </WorkspaceProvider>,
     );
@@ -157,7 +172,10 @@ describe("RequestPane", () => {
   it("should seed the editor with the active request's body text", async () => {
     const user = userEvent.setup();
     render(
-      <WorkspaceProvider tree={bodyFixtureTree} initialActiveRequestId="req-json-body">
+      <WorkspaceProvider
+        tree={bodyFixtureTree}
+        initialActiveRequestId="req-json-body"
+      >
         <RequestPane />
       </WorkspaceProvider>,
     );
@@ -173,7 +191,10 @@ describe("RequestPane", () => {
   it("should show an empty editable editor with no 'No body' text if the body is empty", async () => {
     const user = userEvent.setup();
     render(
-      <WorkspaceProvider tree={bodyFixtureTree} initialActiveRequestId="req-empty-body">
+      <WorkspaceProvider
+        tree={bodyFixtureTree}
+        initialActiveRequestId="req-empty-body"
+      >
         <RequestPane />
       </WorkspaceProvider>,
     );
@@ -191,7 +212,10 @@ describe("RequestPane", () => {
   it("should syntax-highlight a JSON body with JSON grammar applied", async () => {
     const user = userEvent.setup();
     render(
-      <WorkspaceProvider tree={bodyFixtureTree} initialActiveRequestId="req-json-body">
+      <WorkspaceProvider
+        tree={bodyFixtureTree}
+        initialActiveRequestId="req-json-body"
+      >
         <RequestPane />
       </WorkspaceProvider>,
     );

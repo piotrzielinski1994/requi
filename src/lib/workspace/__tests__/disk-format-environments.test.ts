@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { serialize, deserialize } from "@/lib/workspace/disk-format";
-import type {
-  FolderNode,
-  RequestNode,
-  TreeNode,
-} from "@/lib/workspace/model";
+import type { FolderNode, RequestNode, TreeNode } from "@/lib/workspace/model";
 
 const request = (
   name: string,
@@ -47,9 +43,11 @@ describe("disk-format environments round-trip", () => {
       prod: { baseUrl: "https://api.example.com", apiKey: "k1" },
     };
     const tree: TreeNode[] = [
-      folder("Api", { variables: { baseUrl: "https://default" }, environments }, [
-        request("Get"),
-      ]),
+      folder(
+        "Api",
+        { variables: { baseUrl: "https://default" }, environments },
+        [request("Get")],
+      ),
     ];
 
     const result = expectOk(deserialize(serialize(tree)));

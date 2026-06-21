@@ -138,10 +138,12 @@ describe("dropTarget empty-zone", () => {
 
   // behavior: dropping on an empty folder's zone targets inside that folder
   it("should target inside the folder if the over id is its empty-zone id", () => {
-    expect(dropTarget(emptyTree, "r1", emptyZoneId("empty"), "inside")).toEqual({
-      parentId: "empty",
-      index: 0,
-    });
+    expect(dropTarget(emptyTree, "r1", emptyZoneId("empty"), "inside")).toEqual(
+      {
+        parentId: "empty",
+        index: 0,
+      },
+    );
   });
 
   // behavior: an empty-zone id for a non-folder / missing id is rejected
@@ -155,9 +157,19 @@ describe("dropTarget empty-zone", () => {
 
 describe("projectDropPosition", () => {
   const overFolder = (pointerY: number) =>
-    projectDropPosition({ pointerY, rectTop: 100, rectHeight: 20, isOverFolder: true });
+    projectDropPosition({
+      pointerY,
+      rectTop: 100,
+      rectHeight: 20,
+      isOverFolder: true,
+    });
   const overRequest = (pointerY: number) =>
-    projectDropPosition({ pointerY, rectTop: 100, rectHeight: 20, isOverFolder: false });
+    projectDropPosition({
+      pointerY,
+      rectTop: 100,
+      rectHeight: 20,
+      isOverFolder: false,
+    });
 
   // behavior: a folder's middle 50% reparents (drop inside) - the wide,
   // reliable target that fixes the "can't drop into a folder" bug.
@@ -189,7 +201,12 @@ describe("projectDropPosition", () => {
   // behavior: a zero-height rect degrades gracefully
   it("should fall back to before if the row has no height", () => {
     expect(
-      projectDropPosition({ pointerY: 50, rectTop: 50, rectHeight: 0, isOverFolder: true }),
+      projectDropPosition({
+        pointerY: 50,
+        rectTop: 50,
+        rectHeight: 0,
+        isOverFolder: true,
+      }),
     ).toBe("before");
   });
 

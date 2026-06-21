@@ -87,12 +87,21 @@ describe("FolderPane", () => {
     const user = userEvent.setup();
     renderContent();
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
 
     const tablist = await screen.findByRole("tablist", {
       name: /folder sections/i,
     });
-    for (const name of ["Vars", "Auth", "Headers", "Params", "Script", "Settings"]) {
+    for (const name of [
+      "Vars",
+      "Auth",
+      "Headers",
+      "Params",
+      "Script",
+      "Settings",
+    ]) {
       expect(within(tablist).getByRole("tab", { name })).toBeInTheDocument();
     }
   });
@@ -102,7 +111,9 @@ describe("FolderPane", () => {
     const user = userEvent.setup();
     renderContent();
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
 
     const tablist = await screen.findByRole("tablist", {
       name: /folder sections/i,
@@ -118,7 +129,9 @@ describe("FolderPane", () => {
     const user = userEvent.setup();
     renderContent();
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
 
     expect(await screen.findByDisplayValue("baseUrl")).toBeInTheDocument();
     expect(
@@ -131,7 +144,9 @@ describe("FolderPane", () => {
     const user = userEvent.setup();
     renderContent();
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
     const tablist = await screen.findByRole("tablist", {
       name: /folder sections/i,
     });
@@ -145,7 +160,9 @@ describe("FolderPane", () => {
     const user = userEvent.setup();
     renderContent();
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
     const tablist = await screen.findByRole("tablist", {
       name: /folder sections/i,
     });
@@ -163,7 +180,9 @@ describe("FolderPane", () => {
     const onTreeChange = vi.fn().mockResolvedValue({ ok: true });
     renderContent(onTreeChange);
 
-    await user.click(await screen.findByRole("button", { name: /open folder/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /open folder/i }),
+    );
     const tablist = await screen.findByRole("tablist", {
       name: /folder sections/i,
     });

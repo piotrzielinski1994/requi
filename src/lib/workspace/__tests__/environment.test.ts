@@ -5,11 +5,7 @@ import {
   parseDotenv,
   setDotenvValue,
 } from "@/lib/workspace/environment";
-import type {
-  FolderNode,
-  RequestNode,
-  TreeNode,
-} from "@/lib/workspace/model";
+import type { FolderNode, RequestNode, TreeNode } from "@/lib/workspace/model";
 
 const request = (
   id: string,

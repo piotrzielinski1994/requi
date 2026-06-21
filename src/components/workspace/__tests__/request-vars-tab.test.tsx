@@ -31,7 +31,10 @@ const tree: TreeNode[] = [
 
 function renderPane(initialActiveRequestId: string) {
   return render(
-    <WorkspaceProvider tree={tree} initialActiveRequestId={initialActiveRequestId}>
+    <WorkspaceProvider
+      tree={tree}
+      initialActiveRequestId={initialActiveRequestId}
+    >
       <RequestPane />
     </WorkspaceProvider>,
   );
@@ -43,7 +46,9 @@ describe("RequestPane Vars tab", () => {
     renderPane("req");
 
     const tablist = screen.getByRole("tablist", { name: /request sections/i });
-    expect(within(tablist).getByRole("tab", { name: "Vars" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Vars" }),
+    ).toBeInTheDocument();
   });
 
   // behavior: the Vars tab lists the request's own variables as editable inputs

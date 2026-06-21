@@ -12,8 +12,14 @@ const tree: TreeNode[] = [
     config: {
       variables: { suffix: "/v1" },
       environments: {
-        local: { baseUrl: "http://localhost:3000", api: "{{baseUrl}}{{suffix}}" },
-        prod: { baseUrl: "https://api.example.com", api: "{{baseUrl}}{{suffix}}" },
+        local: {
+          baseUrl: "http://localhost:3000",
+          api: "{{baseUrl}}{{suffix}}",
+        },
+        prod: {
+          baseUrl: "https://api.example.com",
+          api: "{{baseUrl}}{{suffix}}",
+        },
       },
     },
     children: [
@@ -37,7 +43,11 @@ describe("resolveTokenPreview", () => {
 
     const preview = resolveTokenPreview("suffix", effective, {});
 
-    expect(preview).toMatchObject({ value: "/v1", source: "Echo", kind: "variable" });
+    expect(preview).toMatchObject({
+      value: "/v1",
+      source: "Echo",
+      kind: "variable",
+    });
   });
 
   // behavior: an env-sourced var resolves, source names the environment
@@ -84,12 +94,20 @@ describe("resolveTokenPreview", () => {
       TOKEN: "abc123",
     });
 
-    expect(preview).toMatchObject({ value: "abc123", source: ".env", kind: "dotenv" });
+    expect(preview).toMatchObject({
+      value: "abc123",
+      source: ".env",
+      kind: "dotenv",
+    });
   });
 
   // behavior: kind discriminates the source for coloring
   it("should tag a plain variable with kind 'variable'", () => {
-    const preview = resolveTokenPreview("suffix", resolveConfig(tree, "req"), {});
+    const preview = resolveTokenPreview(
+      "suffix",
+      resolveConfig(tree, "req"),
+      {},
+    );
 
     expect(preview?.kind).toBe("variable");
   });
@@ -134,14 +152,20 @@ describe("resolveTokenPreview", () => {
   it("should not resolve a bare name from processEnv", () => {
     const effective = resolveConfig(tree, "req");
 
-    expect(resolveTokenPreview("TOKEN", effective, { TOKEN: "abc" })).toBeNull();
+    expect(
+      resolveTokenPreview("TOKEN", effective, { TOKEN: "abc" }),
+    ).toBeNull();
   });
 });
 
 describe("resolveTokenPreview - rawValue + write target", () => {
   // behavior: a plain var exposes its raw stored value + a variable target with the scope id
   it("should expose the raw value and a variable target for a plain variable", () => {
-    const preview = resolveTokenPreview("suffix", resolveConfig(tree, "req"), {});
+    const preview = resolveTokenPreview(
+      "suffix",
+      resolveConfig(tree, "req"),
+      {},
+    );
 
     expect(preview?.rawValue).toBe("/v1");
     expect(preview?.target).toEqual({

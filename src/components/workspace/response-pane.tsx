@@ -3,7 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { KeyValueTable } from "@/components/workspace/key-value-table";
 import { JsonViewer } from "@/components/workspace/json-viewer";
-import { PANE_TABS_LIST, PANE_TABS_TRIGGER } from "@/components/workspace/pane-tabs";
+import {
+  PANE_TABS_LIST,
+  PANE_TABS_TRIGGER,
+} from "@/components/workspace/pane-tabs";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { RequestResponse } from "@/components/workspace/mock-data";
 import { filterJson } from "@/lib/http/filter";
@@ -118,6 +121,9 @@ export function ResponsePane() {
   }
 
   return (
-    <ResponseTabs key={`${activeRequest.id}:${state.status}`} response={response} />
+    <ResponseTabs
+      key={`${activeRequest.id}:${state.status}`}
+      response={response}
+    />
   );
 }

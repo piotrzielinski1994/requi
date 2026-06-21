@@ -5,7 +5,11 @@ import { interpolate } from "@/lib/http/interpolate";
 describe("interpolate - variables", () => {
   // AC-009 - behavior
   it("should replace a {{name}} token from the vars map", () => {
-    const out = interpolate("{{baseUrl}}/get", { baseUrl: "https://x.test" }, {});
+    const out = interpolate(
+      "{{baseUrl}}/get",
+      { baseUrl: "https://x.test" },
+      {},
+    );
 
     expect(out).toBe("https://x.test/get");
   });
@@ -44,7 +48,11 @@ describe("interpolate - variables", () => {
 describe("interpolate - process.env namespace", () => {
   // AC-005, AC-009, TC-003 - behavior
   it("should resolve {{process.env.KEY}} from the processEnv map", () => {
-    const out = interpolate("Bearer {{process.env.TOKEN}}", {}, { TOKEN: "abc123" });
+    const out = interpolate(
+      "Bearer {{process.env.TOKEN}}",
+      {},
+      { TOKEN: "abc123" },
+    );
 
     expect(out).toBe("Bearer abc123");
   });
@@ -89,11 +97,7 @@ describe("interpolate - recursive resolution", () => {
 
   // AC-010 - behavior: chain three levels deep
   it("should resolve a multi-level variable chain", () => {
-    const out = interpolate(
-      "{{a}}",
-      { a: "{{b}}", b: "{{c}}", c: "deep" },
-      {},
-    );
+    const out = interpolate("{{a}}", { a: "{{b}}", b: "{{c}}", c: "deep" }, {});
 
     expect(out).toBe("deep");
   });

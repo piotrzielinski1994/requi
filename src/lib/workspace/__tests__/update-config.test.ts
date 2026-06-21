@@ -148,10 +148,7 @@ describe("updateNodeConfig leaves the rest of the tree intact", () => {
 describe("updateNodeConfig unknown id", () => {
   // AC-016 - behavior: an unknown id leaves the tree value-equal to the input.
   it("should return a tree equal to the input if the id is unknown", () => {
-    const tree: TreeNode[] = [
-      folder("f1", [request("c1")]),
-      request("r1"),
-    ];
+    const tree: TreeNode[] = [folder("f1", [request("c1")]), request("r1")];
 
     const result = updateNodeConfig(tree, "does-not-exist", { timeoutMs: 1 });
 

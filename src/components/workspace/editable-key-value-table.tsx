@@ -136,7 +136,9 @@ export function EditableKeyValueTable({
                 placeholder={isBlankRow ? keyPlaceholder : undefined}
                 autoComplete="off"
                 spellCheck={false}
-                onChange={(event) => editCell(index, { key: event.target.value })}
+                onChange={(event) =>
+                  editCell(index, { key: event.target.value })
+                }
                 onBlur={flush}
                 className={input}
               />

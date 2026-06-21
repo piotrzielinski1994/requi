@@ -29,9 +29,7 @@ function NewRequestProbe() {
       <span data-testid="active-name">{activeRequest?.name ?? "none"}</span>
       <span data-testid="settings-active">{String(isSettingsActive)}</span>
       <span data-testid="active-in-index">
-        {String(
-          activeRequestId !== null && requestsById.has(activeRequestId),
-        )}
+        {String(activeRequestId !== null && requestsById.has(activeRequestId))}
       </span>
       <button type="button" onClick={() => newRequest()}>
         new request
@@ -65,8 +63,9 @@ function renderProbe(initialActiveRequestId?: string) {
 }
 
 describe("WorkspaceProvider newRequest", () => {
-  // AC-004, TC-004 — behavior
-  it("should open a draft as the active tab with method GET and an empty URL if newRequest is called", async () => {
+  // behavior: new request opens a real node as the active tab with method GET
+  // and an empty URL.
+  it("should open a new request as the active tab with method GET and an empty URL if newRequest is called", async () => {
     const user = userEvent.setup();
     renderProbe("req-profile");
 
@@ -80,23 +79,24 @@ describe("WorkspaceProvider newRequest", () => {
     expect(screen.getByTestId("active-name")).not.toHaveTextContent("none");
   });
 
-  // AC-004, TC-004 — behavior
-  it("should open distinct drafts if newRequest is called multiple times", async () => {
+  // behavior: each new request is a distinct node/tab.
+  it("should open distinct requests if newRequest is called multiple times", async () => {
     const user = userEvent.setup();
     renderProbe("req-profile");
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    const firstDraftId = screen.getByTestId("active-id").textContent;
+    const firstId = screen.getByTestId("active-id").textContent;
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    const secondDraftId = screen.getByTestId("active-id").textContent;
+    const secondId = screen.getByTestId("active-id").textContent;
 
     expect(screen.getByTestId("open-count")).toHaveTextContent("3");
-    expect(firstDraftId).not.toBe(secondDraftId);
+    expect(firstId).not.toBe(secondId);
   });
 
-  // AC-004 — side-effect-contract: drafts resolve through requestsById like tree requests.
-  it("should resolve the draft through requestsById so lookup keeps working", async () => {
+  // side-effect-contract: a created request resolves through requestsById (it's
+  // a real tree node now).
+  it("should resolve the created request through requestsById so lookup keeps working", async () => {
     const user = userEvent.setup();
     // No initial active request: nothing is in the index as active yet.
     renderProbe();
@@ -106,13 +106,13 @@ describe("WorkspaceProvider newRequest", () => {
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
 
-    // The freshly-opened draft is the active request AND resolvable by id.
+    // The freshly-created request is the active request AND resolvable by id.
     expect(screen.getByTestId("active-id")).not.toHaveTextContent("none");
     expect(screen.getByTestId("active-in-index")).toHaveTextContent("true");
   });
 
-  // AC-004 — side-effect-contract: closeRequest must work for a draft.
-  it("should drop the draft from open tabs if closeRequest is called for it", async () => {
+  // side-effect-contract: closeRequest closes the created request's tab.
+  it("should drop the created request from open tabs if closeRequest is called for it", async () => {
     const user = userEvent.setup();
     renderProbe("req-profile");
 
@@ -124,7 +124,7 @@ describe("WorkspaceProvider newRequest", () => {
     expect(screen.getByTestId("open-count")).toHaveTextContent("1");
   });
 
-  // AC-005, TC-005 — side-effect-contract: opening a draft deactivates settings.
+  // AC-005, TC-005 — side-effect-contract: creating a request deactivates settings.
   it("should deactivate settings if newRequest is called while settings is active", async () => {
     const user = userEvent.setup();
     renderProbe("req-profile");

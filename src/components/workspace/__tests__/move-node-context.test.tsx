@@ -101,7 +101,11 @@ type RenderOptions = {
   initialExpandedIds?: string[];
 };
 
-function renderProbe({ move, onTreeChange, initialExpandedIds }: RenderOptions) {
+function renderProbe({
+  move,
+  onTreeChange,
+  initialExpandedIds,
+}: RenderOptions) {
   return render(
     <WorkspaceProvider
       tree={fixtureTree}
@@ -212,9 +216,9 @@ describe("WorkspaceProvider moveNode", () => {
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalledTimes(1));
     const nextTree = onTreeChange.mock.calls[0][0] as TreeNode[];
-    expect(findFolderChildren(nextTree, "folder-users")?.map((n) => n.id)).toEqual(
-      ["req-session", "req-profile"],
-    );
+    expect(
+      findFolderChildren(nextTree, "folder-users")?.map((n) => n.id),
+    ).toEqual(["req-session", "req-profile"]);
   });
 
   // no-op — behavior: an illegal move leaves the tree untouched and skips persistence.

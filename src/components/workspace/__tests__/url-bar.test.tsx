@@ -1,9 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
-import { WorkspaceProvider } from "@/components/workspace/workspace-context";
+import {
+  WorkspaceProvider,
+  useWorkspace,
+} from "@/components/workspace/workspace-context";
 import { UrlBar } from "@/components/workspace/url-bar";
+import { ToastProvider } from "@/components/ui/toast";
 import { fixtureTree } from "./fixtures";
+
+function NewRequestButton() {
+  const { newRequest } = useWorkspace();
+  return (
+    <button type="button" onClick={() => newRequest()}>
+      new request
+    </button>
+  );
+}
 
 describe("UrlBar", () => {
   // AC-008 — behavior
@@ -39,5 +53,27 @@ describe("UrlBar", () => {
 
     const bar = screen.getByRole("group", { name: /url bar/i });
     expect(within(bar).getByText(/no request selected/i)).toBeInTheDocument();
+  });
+
+  // behavior: creating the FIRST request from the empty state focuses the URL
+  // input (the input mounts fresh on create, so the focus must still land).
+  it("should focus the URL input when the first request is created from the empty state", async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <WorkspaceProvider tree={[]}>
+          <NewRequestButton />
+          <UrlBar />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+    // empty state: no URL input yet.
+    expect(screen.queryByRole("textbox", { name: /url/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /new request/i }));
+
+    const urlBox = await screen.findByRole("textbox", { name: /url/i });
+    await waitFor(() => expect(urlBox).toHaveFocus());
   });
 });

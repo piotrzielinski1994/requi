@@ -4,10 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { SettingsProvider, useSettings } from "@/lib/settings/settings-context";
 import { createInMemorySettingsStore } from "@/lib/settings/in-memory-store";
-import {
-  DEFAULT_SETTINGS,
-  type SettingsStore,
-} from "@/lib/settings/settings";
+import { DEFAULT_SETTINGS, type SettingsStore } from "@/lib/settings/settings";
 
 function SidebarProbe() {
   const { settings, saveSidebarHidden } = useSettings();

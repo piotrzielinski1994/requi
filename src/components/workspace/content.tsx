@@ -38,7 +38,7 @@ function RequestView() {
 }
 
 export function Content() {
-  const { isSettingsActive, editTarget } = useWorkspace();
+  const { isSettingsActive, isEditorActive, editTarget } = useWorkspace();
 
   return (
     <div className="flex h-full flex-col">
@@ -55,10 +55,12 @@ export function Content() {
         </div>
       );
     }
-    if (editTarget?.kind === "config") {
+    // The editor only owns the content area while it is the ACTIVE view; it can
+    // stay open (its tab present) in the background while a request is active.
+    if (isEditorActive && editTarget?.kind === "config") {
       return <FolderPane />;
     }
-    if (editTarget?.kind === "env") {
+    if (isEditorActive && editTarget?.kind === "env") {
       return <EnvEditor />;
     }
     return <RequestView />;

@@ -32,7 +32,7 @@ function TabsProbe() {
         close all
       </button>
       <button type="button" onClick={() => newRequest()}>
-        new draft
+        new request
       </button>
     </div>
   );
@@ -95,7 +95,7 @@ describe("WorkspaceProvider open-tab persistence", () => {
     });
   });
 
-  it("should not include in-memory drafts in the persisted open ids", async () => {
+  it("should not include freshly-created (in-session) request ids in the persisted open ids", async () => {
     const user = userEvent.setup();
     const onTabsChange = vi.fn();
 
@@ -109,7 +109,7 @@ describe("WorkspaceProvider open-tab persistence", () => {
       </WorkspaceProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: /new draft/i }));
+    await user.click(screen.getByRole("button", { name: /new request/i }));
 
     await waitFor(() => {
       const [ids, active] = onTabsChange.mock.calls.at(-1)!;
@@ -141,16 +141,19 @@ describe("WorkspaceProvider open-tab persistence", () => {
     });
   });
 
-  it("should also drop in-memory drafts when closeAllRequests is called", async () => {
+  it("should also drop a freshly-created request tab when closeAllRequests is called", async () => {
     const user = userEvent.setup();
 
     render(
-      <WorkspaceProvider tree={fixtureTree} initialOpenRequestIds={["req-profile"]}>
+      <WorkspaceProvider
+        tree={fixtureTree}
+        initialOpenRequestIds={["req-profile"]}
+      >
         <TabsProbe />
       </WorkspaceProvider>,
     );
 
-    await user.click(screen.getByRole("button", { name: /new draft/i }));
+    await user.click(screen.getByRole("button", { name: /new request/i }));
     expect(screen.getByTestId("open-ids")).not.toHaveTextContent("");
 
     await user.click(screen.getByRole("button", { name: /close all/i }));

@@ -119,8 +119,7 @@ export function dropTarget(
     return null;
   }
   const dragLocation = locateNode(tree, dragId);
-  const rawIndex =
-    position === "before" ? location.index : location.index + 1;
+  const rawIndex = position === "before" ? location.index : location.index + 1;
   // moveNode evaluates index AFTER removing the dragged node; if it shared the
   // target parent and sat before the drop point, that removal shifts it down 1.
   const isSameParent =

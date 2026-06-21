@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -158,6 +158,7 @@ function UrlField({
   effective,
   processEnv,
   environment,
+  inputRef,
   onChange,
   onSend,
 }: {
@@ -165,12 +166,14 @@ function UrlField({
   effective: EffectiveConfig | null;
   processEnv: Record<string, string>;
   environment: string | null;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (url: string) => void;
   onSend: () => void;
 }) {
   return (
     <div className="relative flex-1">
       <input
+        ref={inputRef}
         aria-label="URL"
         value={url}
         onChange={(event) => onChange(event.target.value)}
@@ -203,7 +206,27 @@ export function UrlBar() {
     setRequestUrl,
     setRequestMethod,
     sendRequest,
+    focusUrlNonce,
   } = useWorkspace();
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Focus the URL input when a new request bumps the nonce. The consumed-nonce
+  // ref lives HERE (UrlBar is always mounted) not in UrlField, which unmounts in
+  // the empty state - so creating the FIRST request (input mounts this render)
+  // still focuses. Skip the initial value so it doesn't grab focus on load.
+  const seenNonce = useRef(focusUrlNonce);
+  useEffect(() => {
+    if (focusUrlNonce === seenNonce.current) {
+      return;
+    }
+    seenNonce.current = focusUrlNonce;
+    inputRef.current?.focus();
+    // When the create came from a radix ContextMenu item, the menu's focus
+    // teardown runs right after this and would steal focus back - re-assert on
+    // the next tick so the URL input wins the race.
+    const settle = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(settle);
+  }, [focusUrlNonce]);
 
   if (!activeRequest) {
     return (
@@ -253,6 +276,7 @@ export function UrlBar() {
         effective={effectiveConfig}
         processEnv={processEnv}
         environment={activeEnvironment}
+        inputRef={inputRef}
         onChange={(url) => setRequestUrl(activeRequest.id, url)}
         onSend={() => sendRequest(activeRequest.id)}
       />

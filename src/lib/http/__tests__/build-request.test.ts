@@ -194,7 +194,10 @@ describe("buildHttpRequest - auth mapping", () => {
   it("should add no Authorization header when auth is none", () => {
     const node = request({ id: "r" });
 
-    const wire = buildHttpRequest(node, effectiveOf({ auth: { type: "none" } }));
+    const wire = buildHttpRequest(
+      node,
+      effectiveOf({ auth: { type: "none" } }),
+    );
 
     const header = wire.headers.find(
       (h) => h.key.toLowerCase() === "authorization",
@@ -233,7 +236,11 @@ describe("buildHttpRequest - body per method", () => {
 describe("buildHttpRequest - integration with resolveConfig", () => {
   // AC-004, TC-002 — behavior: real EffectiveConfig from the tree resolves and merges.
   it("should build the final url from a real resolved tree (var + params)", () => {
-    const node = request({ id: "req-1", method: "GET", url: "{{baseUrl}}/get" });
+    const node = request({
+      id: "req-1",
+      method: "GET",
+      url: "{{baseUrl}}/get",
+    });
     const tree: TreeNode[] = [
       {
         kind: "folder",

@@ -72,8 +72,9 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
 
 function sortOrdered(entries: Ordered[]): TreeNode[] {
   const ordered = entries
-    .filter((entry): entry is Ordered & { order: number } =>
-      entry.order !== undefined,
+    .filter(
+      (entry): entry is Ordered & { order: number } =>
+        entry.order !== undefined,
     )
     .sort((a, b) => a.order - b.order)
     .map((entry) => entry.node);

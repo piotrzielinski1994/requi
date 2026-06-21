@@ -56,7 +56,9 @@ function SendProbe() {
     sendRequest: (id: string) => void;
   };
 
-  const activeState = activeRequestId ? readState(ctx, activeRequestId) : undefined;
+  const activeState = activeRequestId
+    ? readState(ctx, activeRequestId)
+    : undefined;
 
   return (
     <div>
@@ -259,7 +261,9 @@ describe("WorkspaceProvider sendRequest - success", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("active-state")).toHaveTextContent("success:200");
+      expect(screen.getByTestId("active-state")).toHaveTextContent(
+        "success:200",
+      );
     });
   });
 
@@ -314,7 +318,9 @@ describe("WorkspaceProvider sendRequest - error", () => {
 
     await user.click(screen.getByRole("button", { name: /send active/i }));
     await waitFor(() => {
-      expect(screen.getByTestId("active-state")).toHaveTextContent("error:boom");
+      expect(screen.getByTestId("active-state")).toHaveTextContent(
+        "error:boom",
+      );
     });
 
     await user.click(screen.getByRole("button", { name: /send active/i }));
@@ -388,15 +394,15 @@ describe("WorkspaceProvider sendRequest - closed mid-flight", () => {
   });
 });
 
-describe("WorkspaceProvider sendRequest - draft", () => {
-  // spec §6 — behavior: a draft request sends fine.
-  it("should send a draft request through the client", async () => {
+describe("WorkspaceProvider sendRequest - freshly created request", () => {
+  // spec §6 — behavior: a just-created (new) request sends fine.
+  it("should send a freshly created request through the client", async () => {
     const user = userEvent.setup();
     const client = createFakeHttpClient();
     renderProbe(client, "req-token");
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
-    expect(screen.getByTestId("active-id")).toHaveTextContent(/^draft-/);
+    expect(screen.getByTestId("active-id")).not.toHaveTextContent(/^draft-/);
 
     await user.click(screen.getByRole("button", { name: /send active/i }));
 

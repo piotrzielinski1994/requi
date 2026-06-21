@@ -48,8 +48,7 @@ function EditorProbe({ save = () => {} }: { save?: () => void }) {
     cancelPendingClose,
   } = ctx;
 
-  const pendingLabel =
-    pendingClose === null ? "none" : pendingClose.kind;
+  const pendingLabel = pendingClose === null ? "none" : pendingClose.kind;
 
   return (
     <div>
@@ -261,9 +260,7 @@ describe("editor close interception", () => {
     await user.click(
       screen.getByRole("button", { name: /register dirty config/i }),
     );
-    await user.click(
-      screen.getByRole("button", { name: /close request A/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /close request A/i }));
 
     expect(screen.getByTestId("pending-close")).toHaveTextContent("one");
   });

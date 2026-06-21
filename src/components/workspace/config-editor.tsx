@@ -31,7 +31,11 @@ const extensions = [
 function parseObject(text: string): Record<string, unknown> | null {
   try {
     const parsed: unknown = JSON.parse(text);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
       return null;
     }
     return parsed as Record<string, unknown>;

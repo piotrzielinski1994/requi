@@ -44,7 +44,9 @@ describe("close-request bug fix (Mod+W with settings active)", () => {
     await openSecondTab(user);
     const tablist = screen.getByRole("tablist", { name: /open requests/i });
     const tree = screen.getByRole("tree", { name: /collection/i });
-    await user.click(within(tree).getByRole("treeitem", { name: "DELETE session" }));
+    await user.click(
+      within(tree).getByRole("treeitem", { name: "DELETE session" }),
+    );
 
     expect(within(tablist).getAllByRole("tab")).toHaveLength(3);
 
@@ -162,7 +164,7 @@ describe("toggle-sidebar (Mod+B)", () => {
 
 describe("new-request (Mod+T)", () => {
   // AC-004, TC-004 — behavior
-  it("should open an active draft tab showing GET and an empty URL if Mod+T fires", async () => {
+  it("should open an active new-request tab showing GET and an empty URL if Mod+T fires", async () => {
     const user = userEvent.setup();
     renderShell("req-profile");
     await screen.findByRole("region", { name: /console/i });
@@ -175,7 +177,7 @@ describe("new-request (Mod+T)", () => {
     await waitFor(() => {
       expect(within(tablist).getAllByRole("tab")).toHaveLength(2);
     });
-    // The URL bar reflects the active draft: GET method, empty url field.
+    // The URL bar reflects the new request: GET method, empty url field.
     const method = await screen.findByLabelText(/method/i);
     expect(method).toHaveTextContent("GET");
     const url = screen.getByRole("textbox", { name: /url/i });
@@ -183,7 +185,7 @@ describe("new-request (Mod+T)", () => {
   });
 
   // AC-004, TC-004 — behavior
-  it("should open a second distinct draft if Mod+T fires twice", async () => {
+  it("should open a second distinct request if Mod+T fires twice", async () => {
     const user = userEvent.setup();
     renderShell("req-profile");
     await screen.findByRole("region", { name: /console/i });

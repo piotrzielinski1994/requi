@@ -32,14 +32,10 @@ describe("CommandPalette", () => {
       makeCommand(NEW_REQUEST),
     ];
 
-    render(
-      <CommandPalette open onOpenChange={vi.fn()} commands={commands} />,
-    );
+    render(<CommandPalette open onOpenChange={vi.fn()} commands={commands} />);
 
     for (const command of commands) {
-      expect(
-        await screen.findByText(command.action.name),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(command.action.name)).toBeInTheDocument();
       expect(
         screen.getByText(formatForDisplay(command.binding)),
       ).toBeInTheDocument();
@@ -55,17 +51,13 @@ describe("CommandPalette", () => {
       makeCommand(NEW_REQUEST),
     ];
 
-    render(
-      <CommandPalette open onOpenChange={vi.fn()} commands={commands} />,
-    );
+    render(<CommandPalette open onOpenChange={vi.fn()} commands={commands} />);
     await screen.findByText(TOGGLE_CONSOLE.name);
 
     await user.type(screen.getByRole("combobox"), "console");
 
     await waitFor(() => {
-      expect(
-        screen.queryByText(TOGGLE_SIDEBAR.name),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(TOGGLE_SIDEBAR.name)).not.toBeInTheDocument();
     });
     expect(screen.getByText(TOGGLE_CONSOLE.name)).toBeInTheDocument();
     expect(screen.queryByText(NEW_REQUEST.name)).not.toBeInTheDocument();
@@ -76,14 +68,14 @@ describe("CommandPalette", () => {
     const user = userEvent.setup();
     const commands = [makeCommand(TOGGLE_CONSOLE), makeCommand(TOGGLE_SIDEBAR)];
 
-    render(
-      <CommandPalette open onOpenChange={vi.fn()} commands={commands} />,
-    );
+    render(<CommandPalette open onOpenChange={vi.fn()} commands={commands} />);
     await screen.findByText(TOGGLE_CONSOLE.name);
 
     await user.type(screen.getByRole("combobox"), "zzzzz");
 
-    expect(await screen.findByText(/no matching commands/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no matching commands/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText(TOGGLE_CONSOLE.name)).not.toBeInTheDocument();
   });
 
@@ -98,11 +90,7 @@ describe("CommandPalette", () => {
     ];
 
     render(
-      <CommandPalette
-        open
-        onOpenChange={onOpenChange}
-        commands={commands}
-      />,
+      <CommandPalette open onOpenChange={onOpenChange} commands={commands} />,
     );
     await screen.findByText(TOGGLE_CONSOLE.name);
 
@@ -152,11 +140,7 @@ describe("CommandPalette", () => {
     ];
 
     render(
-      <CommandPalette
-        open
-        onOpenChange={onOpenChange}
-        commands={commands}
-      />,
+      <CommandPalette open onOpenChange={onOpenChange} commands={commands} />,
     );
 
     await user.click(await screen.findByText(TOGGLE_SIDEBAR.name));

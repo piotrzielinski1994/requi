@@ -1,4 +1,10 @@
-import { mkdir, readDir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  mkdir,
+  readDir,
+  readTextFile,
+  remove,
+  writeTextFile,
+} from "@tauri-apps/plugin-fs";
 import type { FileMap } from "@/lib/workspace/disk-format";
 import type { ReadResult, WorkspaceFs, WriteResult } from "@/lib/workspace/fs";
 import {

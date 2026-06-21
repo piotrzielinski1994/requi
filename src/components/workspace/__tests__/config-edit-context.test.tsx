@@ -66,11 +66,13 @@ function EditProbe() {
   );
 }
 
-function renderProbe(props: {
-  onTreeChange?: WorkspaceProviderProps["onTreeChange"];
-  onEnvChange?: WorkspaceProviderProps["onEnvChange"];
-  envText?: string;
-} = {}) {
+function renderProbe(
+  props: {
+    onTreeChange?: WorkspaceProviderProps["onTreeChange"];
+    onEnvChange?: WorkspaceProviderProps["onEnvChange"];
+    envText?: string;
+  } = {},
+) {
   return render(
     <WorkspaceProvider
       tree={tree}
@@ -86,7 +88,9 @@ function renderProbe(props: {
 // Local alias so the prop names below stay honest even before the provider
 // declares them; the actual provider props are the source of truth.
 type WorkspaceProviderProps = {
-  onTreeChange?: (tree: TreeNode[]) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onTreeChange?: (
+    tree: TreeNode[],
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
   onEnvChange?: (text: string) => void;
 };
 

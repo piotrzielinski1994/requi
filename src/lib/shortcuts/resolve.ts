@@ -5,9 +5,7 @@ import {
   type ShortcutOverrides,
 } from "@/lib/shortcuts/registry";
 
-const ACTION_IDS = new Set<string>(
-  SHORTCUT_ACTIONS.map((action) => action.id),
-);
+const ACTION_IDS = new Set<string>(SHORTCUT_ACTIONS.map((action) => action.id));
 
 function isShortcutActionId(value: string): value is ShortcutActionId {
   return ACTION_IDS.has(value);

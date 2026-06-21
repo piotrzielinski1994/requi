@@ -20,8 +20,12 @@ describe("ResponsePane", () => {
     );
 
     const tablist = screen.getByRole("tablist", { name: /response sections/i });
-    expect(within(tablist).getByRole("tab", { name: "Response" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "Headers" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Response" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "Headers" }),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText(/142\s*ms/)).toBeInTheDocument();

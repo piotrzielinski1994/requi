@@ -8,6 +8,10 @@ export type ShortcutActionId =
   | "close-request"
   | "close-all-requests"
   | "new-request"
+  | "new-folder"
+  | "duplicate-request"
+  | "rename-node"
+  | "delete-node"
   | "open-workspace"
   | "send-request"
   | "save-active-editor"
@@ -74,8 +78,32 @@ export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = [
   {
     id: "new-request",
     name: "New request",
-    description: "Open a new draft request tab.",
+    description: "Create a new request relative to the tree selection.",
     defaultHotkey: "Mod+T",
+  },
+  {
+    id: "new-folder",
+    name: "New folder",
+    description: "Create a folder relative to the tree selection.",
+    defaultHotkey: "Mod+Shift+N",
+  },
+  {
+    id: "duplicate-request",
+    name: "Duplicate request",
+    description: "Duplicate the selected request.",
+    defaultHotkey: "Mod+D",
+  },
+  {
+    id: "rename-node",
+    name: "Rename",
+    description: "Rename the selected request or folder.",
+    defaultHotkey: "F2",
+  },
+  {
+    id: "delete-node",
+    name: "Delete",
+    description: "Delete the selected request or folder.",
+    defaultHotkey: "Mod+Backspace",
   },
   {
     id: "open-workspace",

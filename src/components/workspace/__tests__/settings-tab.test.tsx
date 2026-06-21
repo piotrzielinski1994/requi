@@ -113,7 +113,9 @@ describe("Settings as an in-app tab", () => {
 
     const tree = screen.getByRole("tree", { name: /collection/i });
     // OAuth folder is expanded (from initialExpandedIds) so its child request is in the DOM.
-    expect(within(tree).getByRole("treeitem", { name: "POST token" })).toBeInTheDocument();
+    expect(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    ).toBeInTheDocument();
 
     // Open settings via the hotkey (Mod+Shift+S resolves to Control+Shift+S under jsdom).
     await user.keyboard("{Control>}{Shift>}s{/Shift}{/Control}");
@@ -130,15 +132,20 @@ describe("Settings as an in-app tab", () => {
     });
 
     // Workspace state survived: both request tabs still present.
-    expect(within(tablist).getByRole("tab", { name: "profile" })).toBeInTheDocument();
-    expect(within(tablist).getByRole("tab", { name: "token" })).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "profile" }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole("tab", { name: "token" }),
+    ).toBeInTheDocument();
     // The previously-active request is active again.
-    expect(within(tablist).getByRole("tab", { name: "profile" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(
+      within(tablist).getByRole("tab", { name: "profile" }),
+    ).toHaveAttribute("aria-selected", "true");
     // The expanded folder is still expanded (its child still in the DOM).
-    expect(within(tree).getByRole("treeitem", { name: "POST token" })).toBeInTheDocument();
+    expect(
+      within(tree).getByRole("treeitem", { name: "POST token" }),
+    ).toBeInTheDocument();
   });
 
   // AC-003, TC-003 — behavior
@@ -152,8 +159,12 @@ describe("Settings as an in-app tab", () => {
     expect(
       await screen.findByRole("heading", { name: /keyboard shortcuts/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("tree", { name: /collection/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /console/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tree", { name: /collection/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /console/i }),
+    ).toBeInTheDocument();
   });
 
   // AC-003 — behavior
