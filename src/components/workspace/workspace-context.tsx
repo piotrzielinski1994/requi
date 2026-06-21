@@ -24,7 +24,7 @@ import {
   renameNode,
 } from "@/lib/workspace/tree-edit";
 import { locateNode } from "@/lib/workspace/tree-locate";
-import { deriveRequestName } from "@/lib/workspace/request-name";
+import { untitledName } from "@/lib/workspace/request-name";
 import type { WriteResult } from "@/lib/workspace/fs";
 import { buildHttpRequest } from "@/lib/http/build-request";
 import { createFakeHttpClient } from "@/lib/http/fake-client";
@@ -48,6 +48,8 @@ import {
 import { findNode } from "@/lib/workspace/tree-locate";
 import type { TokenTarget } from "@/components/workspace/url-token";
 import { useToast } from "@/components/ui/toast";
+import { toCurl } from "@/lib/curl/to-curl";
+import { parseCurl, type CurlParseResult } from "@/lib/curl/parse-curl";
 
 type RequestOverride = Partial<
   Pick<RequestNode, "name" | "url" | "method" | "body" | "bodyMode" | "bodyForm">
@@ -163,6 +165,11 @@ type WorkspaceContextValue = {
   openSettings: () => void;
   closeSettings: () => void;
   newRequest: (target?: MoveTarget) => void;
+  copyAsCurl: () => void;
+  isCurlImportOpen: boolean;
+  openCurlImport: () => void;
+  closeCurlImport: () => void;
+  importCurl: (text: string) => CurlParseResult;
   focusUrlNonce: number;
 };
 
@@ -240,6 +247,7 @@ export function WorkspaceProvider({
   const [isEditorActive, setIsEditorActive] = useState(false);
   const [pendingClose, setPendingClose] = useState<PendingClose>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+  const [isCurlImportOpen, setIsCurlImportOpen] = useState(false);
   const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
   const [consoleLines, setConsoleLines] =
     useState<string[]>(initialConsoleLines);
@@ -250,9 +258,10 @@ export function WorkspaceProvider({
     Map<string, ResponseState>
   >(() => new Map());
   const nodeCounter = useRef(0);
-  // Ids of freshly-created requests whose name auto-tracks the URL until the
-  // user names them (manual rename) or the request is saved.
-  const autoNameIds = useRef<Set<string>>(new Set());
+  // Ids of freshly-created requests whose name auto-tracks the URL until named
+  // (manual rename) or saved, mapped to the per-request fallback name (its
+  // unique "untitled") used when the URL derives no path.
+  const autoNameIds = useRef<Map<string, string>>(new Map());
   const [focusUrlNonce, setFocusUrlNonce] = useState(0);
   const [activeEditor, setActiveEditor] = useState<ActiveEditor | null>(null);
   const registerActiveEditor = useCallback(
@@ -464,11 +473,12 @@ export function WorkspaceProvider({
     const setRequestForm = (id: string, bodyForm: KeyValue[]) =>
       mergeOverride(id, { bodyForm });
     const setRequestUrl = (id: string, url: string) => {
-      // A freshly-created request's name tracks the URL path until the user
-      // names it. deriveRequestName("") is "" -> fall back to "New Request" so
-      // clearing the URL doesn't blank the tab/row label.
-      if (autoNameIds.current.has(id)) {
-        mergeOverride(id, { url, name: deriveRequestName(url) || "New Request" });
+      // A freshly-created request's name tracks the URL verbatim until the user
+      // names it; an empty URL falls back to the request's unique untitled name
+      // so clearing the field doesn't blank the label.
+      const fallback = autoNameIds.current.get(id);
+      if (fallback !== undefined) {
+        mergeOverride(id, { url, name: url.trim() || fallback });
         return;
       }
       mergeOverride(id, { url });
@@ -561,17 +571,23 @@ export function WorkspaceProvider({
     // expands the parent, opens + activates + selects its tab, and FOCUSES the
     // URL input (not inline rename) - the name then auto-tracks the URL until the
     // user names it or saves. No draft/save step.
-    const newRequest = (target?: MoveTarget) => {
+    // Insert a request node at the derived placement, persist immediately, open
+    // + activate + select its tab. `autoName` keeps the name tracking the URL and
+    // focuses the URL input (the New-request flow); imports pass autoName=false
+    // since they arrive fully formed.
+    const createRequestNode = (
+      partial: Pick<RequestNode, "name" | "method" | "url" | "body"> &
+        Partial<RequestNode>,
+      target?: MoveTarget,
+      autoName = false,
+    ) => {
       nodeCounter.current += 1;
       const id = `new-${nodeCounter.current}`;
       const request: RequestNode = {
         kind: "request",
-        id,
-        name: "New Request",
-        method: "GET",
-        url: "",
-        body: "",
         config: {},
+        ...partial,
+        id,
       };
       const placement = derivePlacement(target);
       if (placement.parentId !== null) {
@@ -579,18 +595,73 @@ export function WorkspaceProvider({
           new Set(current).add(placement.parentId!),
         );
       }
-      autoNameIds.current.add(id);
+      if (autoName) {
+        autoNameIds.current.set(id, request.name);
+      }
       setIsSettingsActive(false);
       setIsEditorActive(false);
       setOpenRequestIds((current) => [...current, id]);
       setActiveRequestId(id);
       setSelectedNodeId(id);
       setRenamingNodeId(null);
-      setFocusUrlNonce((nonce) => nonce + 1);
+      if (autoName) {
+        setFocusUrlNonce((nonce) => nonce + 1);
+      }
       persistTree(
         insertNode(tree, placement.parentId, placement.index, request),
         "create",
       );
+    };
+
+    const newRequest = (target?: MoveTarget) => {
+      const existingNames = [...requestsById.values()].map(
+        (request) => request.name,
+      );
+      createRequestNode(
+        { name: untitledName(existingNames), method: "GET", url: "", body: "" },
+        target,
+        true,
+      );
+    };
+
+    const copyAsCurl = () => {
+      if (activeRequestId === null) {
+        return;
+      }
+      const node = requestsById.get(activeRequestId);
+      if (!node) {
+        return;
+      }
+      const effective = resolveConfig(tree, activeRequestId, {
+        environment: activeEnvironment ?? undefined,
+      });
+      const wire = buildHttpRequest(node, effective, processEnv);
+      navigator.clipboard?.writeText(toCurl(wire));
+      showToastRef.current("Copied as cURL");
+    };
+
+    const openCurlImport = () => setIsCurlImportOpen(true);
+    const closeCurlImport = () => setIsCurlImportOpen(false);
+
+    const importCurl = (text: string): CurlParseResult => {
+      const result = parseCurl(text);
+      if (!result.ok) {
+        return result;
+      }
+      const { method, url, headers, body, auth } = result.request;
+      createRequestNode({
+        name: url.trim() || "Imported Request",
+        method,
+        url,
+        body: body ?? "",
+        config: {
+          ...(headers.length > 0 ? { headers } : {}),
+          ...(auth ? { auth } : {}),
+        },
+      });
+      setIsCurlImportOpen(false);
+      showToastRef.current("Imported request");
+      return result;
     };
 
     const persistTree = (next: TreeNode[], failLabel: string) => {
@@ -1054,6 +1125,11 @@ export function WorkspaceProvider({
         setIsSettingsActive(false);
       },
       newRequest,
+      copyAsCurl,
+      isCurlImportOpen,
+      openCurlImport,
+      closeCurlImport,
+      importCurl,
       focusUrlNonce,
     };
   }, [
@@ -1078,6 +1154,7 @@ export function WorkspaceProvider({
     requestOverrides,
     pendingClose,
     pendingDelete,
+    isCurlImportOpen,
     renamingNodeId,
     focusUrlNonce,
     activeEditor,

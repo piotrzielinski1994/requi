@@ -16,7 +16,18 @@ import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { RequestNode } from "@/components/workspace/mock-data";
 
 function RequestTabs({ request }: { request: RequestNode }) {
-  const { activeRequestTab, setRequestTab } = useWorkspace();
+  const {
+    activeRequestTab,
+    setRequestTab,
+    effectiveConfig,
+    processEnv,
+    activeEnvironment,
+  } = useWorkspace();
+  const highlight = {
+    effective: effectiveConfig,
+    processEnv,
+    environment: activeEnvironment,
+  };
 
   return (
     <Tabs
@@ -50,16 +61,28 @@ function RequestTabs({ request }: { request: RequestNode }) {
         </TabsList>
       </div>
       <TabsContent value="vars">
-        <VarsPanel id={request.id} config={request.config} />
+        <VarsPanel
+          id={request.id}
+          config={request.config}
+          highlight={highlight}
+        />
       </TabsContent>
       <TabsContent value="auth">
         <AuthPanel id={request.id} config={request.config} />
       </TabsContent>
       <TabsContent value="headers">
-        <HeadersPanel id={request.id} config={request.config} />
+        <HeadersPanel
+          id={request.id}
+          config={request.config}
+          highlight={highlight}
+        />
       </TabsContent>
       <TabsContent value="params">
-        <ParamsPanel id={request.id} config={request.config} />
+        <ParamsPanel
+          id={request.id}
+          config={request.config}
+          highlight={highlight}
+        />
       </TabsContent>
       <TabsContent value="body" className="min-h-0 flex-1">
         <BodyPanel key={request.id} request={request} />

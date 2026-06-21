@@ -72,6 +72,26 @@ function AutoNameProbe() {
       >
         begin rename
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (activeRequestId !== null) {
+            setRequestUrl(activeRequestId, "https://");
+          }
+        }}
+      >
+        type prefix only
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (activeRequestId !== null) {
+            setRequestUrl(activeRequestId, "");
+          }
+        }}
+      >
+        clear url
+      </button>
       <button type="button" onClick={() => setActiveRequest("req-profile")}>
         activate profile
       </button>
@@ -96,16 +116,54 @@ function renderProbe() {
 }
 
 describe("WorkspaceProvider request auto-name", () => {
-  // behavior: typing a URL into a freshly created request sets its name from the
-  // URL path.
-  it("should set a new request's name from its URL while it is unnamed", async () => {
+  // behavior: a freshly created request is named "untitled" by default.
+  it("should name a new request 'untitled' by default", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+
+    await user.click(screen.getByRole("button", { name: /new request/i }));
+
+    expect(screen.getByTestId("active-name")).toHaveTextContent("untitled");
+  });
+
+  // behavior: typing a URL into a freshly created request sets its name to the
+  // URL verbatim (full string, no path extraction).
+  it("should set a new request's name from its URL verbatim while it is unnamed", async () => {
     const user = userEvent.setup();
     renderProbe();
 
     await user.click(screen.getByRole("button", { name: /new request/i }));
     await user.click(screen.getByRole("button", { name: /^type url$/i }));
 
-    expect(screen.getByTestId("active-name")).toHaveTextContent("/widgets/list");
+    expect(screen.getByTestId("active-name")).toHaveTextContent(
+      "{{baseUrl}}/widgets/list",
+    );
+  });
+
+  // behavior (#2 fix): an in-progress URL (e.g. "https://") stays the name
+  // verbatim - it does NOT reset to "untitled" mid-typing.
+  it("should keep an in-progress URL verbatim as the name, not reset to untitled", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+
+    await user.click(screen.getByRole("button", { name: /new request/i }));
+    await user.click(screen.getByRole("button", { name: /^type url$/i }));
+    await user.click(screen.getByRole("button", { name: /type prefix only/i }));
+
+    expect(screen.getByTestId("active-name")).toHaveTextContent("https://");
+    expect(screen.getByTestId("active-name")).not.toHaveTextContent("untitled");
+  });
+
+  // behavior: clearing the URL falls back to the request's untitled name.
+  it("should fall back to the untitled name if the URL is cleared", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+
+    await user.click(screen.getByRole("button", { name: /new request/i }));
+    await user.click(screen.getByRole("button", { name: /^type url$/i }));
+    await user.click(screen.getByRole("button", { name: /clear url/i }));
+
+    expect(screen.getByTestId("active-name")).toHaveTextContent("untitled");
   });
 
   // behavior: the auto-name keeps tracking further URL edits (still unnamed).
@@ -195,9 +253,9 @@ describe("request auto-name reflected in the sidebar tree row", () => {
     await user.click(screen.getByRole("button", { name: /new request/i }));
 
     const tree = screen.getByRole("tree", { name: /collection/i });
-    // freshly created: the row shows the default name.
+    // freshly created: the row shows the default untitled name.
     expect(
-      within(tree).getByRole("treeitem", { name: /New Request/i }),
+      within(tree).getByRole("treeitem", { name: /untitled/i }),
     ).toBeInTheDocument();
 
     // type into the real URL input.
@@ -209,7 +267,7 @@ describe("request auto-name reflected in the sidebar tree row", () => {
       within(tree).getByRole("treeitem", { name: /\/widgets/ }),
     ).toBeInTheDocument();
     expect(
-      within(tree).queryByRole("treeitem", { name: /New Request/i }),
+      within(tree).queryByRole("treeitem", { name: /untitled/i }),
     ).not.toBeInTheDocument();
   });
 

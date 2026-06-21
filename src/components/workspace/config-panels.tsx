@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -12,7 +12,10 @@ import {
   PANE_TABS_LIST,
   PANE_TABS_TRIGGER,
 } from "@/components/workspace/pane-tabs";
-import { EditableKeyValueTable } from "@/components/workspace/editable-key-value-table";
+import {
+  EditableKeyValueTable,
+  type TokenHighlightContext,
+} from "@/components/workspace/editable-key-value-table";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { Auth, ConfigScope } from "@/components/workspace/mock-data";
 
@@ -23,85 +26,71 @@ const AUTH_TYPE_LABELS: Record<Auth["type"], string> = {
   basic: "Basic Auth",
 };
 
-function PasswordField({
-  value,
-  onCommit,
-}: {
-  value: string;
-  onCommit: (value: string) => void;
-}) {
-  const [isVisible, setIsVisible] = useState(false);
-  const Icon = isVisible ? EyeOff : Eye;
-  const [draft, setDraft] = useState(value);
-  const [seed, setSeed] = useState(value);
-  if (seed !== value) {
-    setSeed(value);
-    setDraft(value);
-  }
+// Shared grid cell + input styling so the auth fields read like the Params grid.
+const AUTH_CELL = "border-r border-b border-border bg-background";
+const AUTH_INPUT =
+  "h-9 w-full bg-background px-2 font-mono text-xs outline-none placeholder:text-muted-foreground";
 
-  return (
-    <div className="relative">
-      <Input
-        id="auth-password"
-        type={isVisible ? "text" : "password"}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => {
-          if (draft !== value) {
-            onCommit(draft);
-          }
-        }}
-        className="pr-9"
-      />
-      <button
-        type="button"
-        aria-label={isVisible ? "Hide password" : "Show password"}
-        aria-pressed={isVisible}
-        onClick={() => setIsVisible((visible) => !visible)}
-        className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground hover:text-foreground"
-      >
-        <Icon className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-// Single-field commit-on-blur input (auth token / username).
-function AuthTextField({
+// One label-cell + value-cell row inside the auth grid. Commits on blur. A
+// `secret` field renders password-masked with a show/hide toggle in its cell.
+function AuthRow({
   id,
   label,
   value,
+  secret = false,
   mono = false,
   onCommit,
 }: {
   id: string;
   label: string;
   value: string;
+  secret?: boolean;
   mono?: boolean;
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
   const [seed, setSeed] = useState(value);
+  const [isVisible, setIsVisible] = useState(false);
   if (seed !== value) {
     setSeed(value);
     setDraft(value);
   }
+  const Icon = isVisible ? EyeOff : Eye;
+  const commit = () => {
+    if (draft !== value) {
+      onCommit(draft);
+    }
+  };
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </label>
-      <Input
-        id={id}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => {
-          if (draft !== value) {
-            onCommit(draft);
-          }
-        }}
-        className={mono ? "font-mono" : undefined}
-      />
+    <div className="contents">
+      <div className={cn(AUTH_CELL, "flex items-center px-2")}>
+        <label htmlFor={id} className="text-xs text-muted-foreground">
+          {label}
+        </label>
+      </div>
+      <div className={cn(AUTH_CELL, "relative")}>
+        <input
+          id={id}
+          type={secret && !isVisible ? "password" : "text"}
+          value={draft}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          className={cn(AUTH_INPUT, secret && "pr-9", mono && "font-mono")}
+        />
+        {secret && (
+          <button
+            type="button"
+            aria-label={isVisible ? "Hide password" : "Show password"}
+            aria-pressed={isVisible}
+            onClick={() => setIsVisible((visible) => !visible)}
+            className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground hover:text-foreground"
+          >
+            <Icon className="size-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -115,48 +104,50 @@ function AuthFields({
 }) {
   if (auth.type === "inherit") {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="p-3 text-sm text-muted-foreground">
         Inherited from parent folder
       </p>
     );
   }
 
   if (auth.type === "none") {
-    return <p className="text-sm text-muted-foreground">No authentication</p>;
-  }
-
-  if (auth.type === "bearer") {
     return (
-      <AuthTextField
-        id="auth-token"
-        label="Token"
-        value={auth.token}
-        mono
-        onCommit={(token) => onChange({ type: "bearer", token })}
-      />
+      <p className="p-3 text-sm text-muted-foreground">No authentication</p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <AuthTextField
-        id="auth-username"
-        label="Username"
-        value={auth.username}
-        onCommit={(username) => onChange({ ...auth, username })}
-      />
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="auth-password"
-          className="text-xs text-muted-foreground"
-        >
-          Password
-        </label>
-        <PasswordField
-          value={auth.password}
-          onCommit={(password) => onChange({ ...auth, password })}
+    <div
+      role="grid"
+      aria-label="Auth fields"
+      className="grid border-t border-l border-border"
+      style={{ gridTemplateColumns: "8rem 1fr" }}
+    >
+      {auth.type === "bearer" ? (
+        <AuthRow
+          id="auth-token"
+          label="Token"
+          value={auth.token}
+          mono
+          onCommit={(token) => onChange({ type: "bearer", token })}
         />
-      </div>
+      ) : (
+        <>
+          <AuthRow
+            id="auth-username"
+            label="Username"
+            value={auth.username}
+            onCommit={(username) => onChange({ ...auth, username })}
+          />
+          <AuthRow
+            id="auth-password"
+            label="Password"
+            value={auth.password}
+            secret
+            onCommit={(password) => onChange({ ...auth, password })}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -200,14 +191,20 @@ export function AuthPanel({ id, config }: { id: string; config: ConfigScope }) {
           </SelectContent>
         </Select>
       </div>
-      <div className="p-3">
-        <AuthFields auth={auth} onChange={change} />
-      </div>
+      <AuthFields auth={auth} onChange={change} />
     </div>
   );
 }
 
-export function VarsPanel({ id, config }: { id: string; config: ConfigScope }) {
+export function VarsPanel({
+  id,
+  config,
+  highlight,
+}: {
+  id: string;
+  config: ConfigScope;
+  highlight?: TokenHighlightContext;
+}) {
   const { saveNodeConfig } = useWorkspace();
   const rows = Object.entries(config.variables ?? {}).map(([key, value]) => ({
     key,
@@ -217,6 +214,7 @@ export function VarsPanel({ id, config }: { id: string; config: ConfigScope }) {
     <EditableKeyValueTable
       rows={rows}
       keyPlaceholder="name"
+      highlight={highlight}
       onChange={(next) =>
         saveNodeConfig(id, {
           ...config,
@@ -230,15 +228,18 @@ export function VarsPanel({ id, config }: { id: string; config: ConfigScope }) {
 export function HeadersPanel({
   id,
   config,
+  highlight,
 }: {
   id: string;
   config: ConfigScope;
+  highlight?: TokenHighlightContext;
 }) {
   const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
       rows={config.headers ?? []}
       withToggle
+      highlight={highlight}
       onChange={(headers) => saveNodeConfig(id, { ...config, headers })}
     />
   );
@@ -247,15 +248,18 @@ export function HeadersPanel({
 export function ParamsPanel({
   id,
   config,
+  highlight,
 }: {
   id: string;
   config: ConfigScope;
+  highlight?: TokenHighlightContext;
 }) {
   const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
       rows={config.params ?? []}
       withToggle
+      highlight={highlight}
       onChange={(params) => saveNodeConfig(id, { ...config, params })}
     />
   );

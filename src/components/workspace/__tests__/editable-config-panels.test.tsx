@@ -152,6 +152,63 @@ describe("editable Headers/Params panel", () => {
   });
 });
 
+describe("config grid {{var}} highlighting", () => {
+  const tokenTree: TreeNode[] = [
+    {
+      kind: "request",
+      id: "req-1",
+      name: "Req",
+      method: "GET",
+      url: "https://api/get",
+      body: "",
+      config: {
+        variables: { token: "tok-123" },
+        headers: [{ key: "Authorization", value: "Bearer {{token}}" }],
+      },
+    },
+  ];
+
+  const renderTokens = (onTreeChange: OnTreeChange) =>
+    render(
+      <ToastProvider>
+        <WorkspaceProvider
+          tree={tokenTree}
+          initialActiveRequestId="req-1"
+          onTreeChange={onTreeChange}
+        >
+          <RequestPane />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+
+  // behavior: a {{var}} inside a header value is rendered as a colored token in
+  // an overlay (like the URL bar), and a resolved variable is emerald.
+  it("should color a {{var}} token in a header value", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
+    renderTokens(onTreeChange);
+    await openTab(user, "Headers");
+
+    const token = screen.getByText("{{token}}");
+    expect(token.className).toContain("text-emerald-500");
+  });
+
+  // behavior: hovering the {{var}} token in a value shows its resolved value.
+  it("should preview the resolved value when a value token is hovered", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
+    renderTokens(onTreeChange);
+    await openTab(user, "Headers");
+
+    await user.hover(screen.getByText("{{token}}"));
+
+    // the hover card's editor input is labeled exactly "Value" (the grid value
+    // cells are "value 1" etc).
+    const input = await screen.findByRole("textbox", { name: /^value$/i });
+    expect(input).toHaveValue("tok-123");
+  });
+});
+
 describe("editable Vars panel", () => {
   // config-grid - behavior: editing a variable value persists it (Record form).
   it("should persist a variable value edit on blur", async () => {
@@ -171,6 +228,31 @@ describe("editable Vars panel", () => {
 });
 
 describe("editable Auth panel", () => {
+  const renderBasic = (onTreeChange: OnTreeChange) => {
+    const basicTree: TreeNode[] = [
+      {
+        kind: "request",
+        id: "req-1",
+        name: "Req",
+        method: "GET",
+        url: "https://api/get",
+        body: "",
+        config: { auth: { type: "basic", username: "ada", password: "pw" } },
+      },
+    ];
+    return render(
+      <ToastProvider>
+        <WorkspaceProvider
+          tree={basicTree}
+          initialActiveRequestId="req-1"
+          onTreeChange={onTreeChange}
+        >
+          <RequestPane />
+        </WorkspaceProvider>
+      </ToastProvider>,
+    );
+  };
+
   // config-grid - behavior: editing the bearer token persists it.
   it("should persist a bearer token edit on blur", async () => {
     const user = userEvent.setup();
@@ -188,6 +270,53 @@ describe("editable Auth panel", () => {
       type: "bearer",
       token: "new-token",
     });
+  });
+
+  // config-grid - behavior: the auth fields render inside a grid (like Params),
+  // with a label cell + value input per field.
+  it("should render the auth fields in a grid", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
+    renderBasic(onTreeChange);
+    await openTab(user, "Auth");
+
+    const grid = screen.getByRole("grid", { name: /auth fields/i });
+    expect(grid).toBeInTheDocument();
+    expect(within(grid).getByLabelText(/username/i)).toBeInTheDocument();
+    expect(within(grid).getByLabelText(/^password$/i)).toBeInTheDocument();
+  });
+
+  // config-grid - behavior: editing the basic username persists it.
+  it("should persist a basic username edit on blur", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
+    renderBasic(onTreeChange);
+    await openTab(user, "Auth");
+
+    const username = screen.getByLabelText(/username/i);
+    await user.clear(username);
+    await user.type(username, "grace");
+    await user.tab();
+
+    await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
+    expect(savedConfig(onTreeChange).auth).toEqual({
+      type: "basic",
+      username: "grace",
+      password: "pw",
+    });
+  });
+
+  // config-grid - behavior: the password show/hide toggle still works in the grid.
+  it("should toggle password visibility in the grid", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
+    renderBasic(onTreeChange);
+    await openTab(user, "Auth");
+
+    const password = screen.getByLabelText(/^password$/i);
+    expect(password).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("button", { name: /show password/i }));
+    expect(password).toHaveAttribute("type", "text");
   });
 
   // The auth TYPE switch is a radix Select; jsdom can't open its portal-rendered
