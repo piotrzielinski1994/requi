@@ -8,12 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  mockConsoleLines,
-  mockTree,
-  type RequestNode,
-  type TreeNode,
-} from "@/components/workspace/mock-data";
+import type { RequestNode, TreeNode } from "@/lib/workspace/model";
 import { resolveConfig, type EffectiveConfig } from "@/lib/workspace/resolve";
 import { moveNode as applyMove, type MoveTarget } from "@/lib/workspace/move";
 import {
@@ -225,8 +220,8 @@ type WorkspaceProviderProps = {
 
 export function WorkspaceProvider({
   children,
-  tree: initialTree = mockTree,
-  consoleLines: initialConsoleLines = mockConsoleLines,
+  tree: initialTree = [],
+  consoleLines: initialConsoleLines = [],
   initialExpandedIds = [],
   initialActiveRequestId,
   initialOpenRequestIds,

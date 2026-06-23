@@ -19,7 +19,7 @@ import {
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { ScriptEditor } from "@/components/workspace/script-editor";
 import type { ScriptStage } from "@/lib/scripts/model";
-import type { Auth, ConfigScope } from "@/components/workspace/mock-data";
+import type { Auth, ConfigScope } from "@/lib/workspace/model";
 
 const AUTH_TYPE_LABELS: Record<Auth["type"], string> = {
   inherit: "Inherit",

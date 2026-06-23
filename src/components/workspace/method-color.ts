@@ -1,4 +1,4 @@
-import type { HttpMethod } from "@/components/workspace/mock-data";
+import type { HttpMethod } from "@/lib/workspace/model";
 
 export const METHOD_COLOR: Record<HttpMethod, string> = {
   GET: "text-green-600 dark:text-green-400",

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TokenHighlight } from "@/components/workspace/var-token";
-import type { KeyValue } from "@/components/workspace/mock-data";
+import type { KeyValue } from "@/lib/workspace/model";
 import type { EffectiveConfig } from "@/lib/workspace/resolve";
 
 const BLANK: KeyValue = { key: "", value: "" };

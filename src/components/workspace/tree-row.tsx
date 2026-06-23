@@ -17,7 +17,7 @@ import type {
   FolderNode,
   RequestNode,
   TreeNode,
-} from "@/components/workspace/mock-data";
+} from "@/lib/workspace/model";
 
 function useRowDnd(id: string) {
   const {

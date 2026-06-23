@@ -13,7 +13,7 @@ import {
   VarsPanel,
 } from "@/components/workspace/config-panels";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { RequestNode } from "@/components/workspace/mock-data";
+import type { RequestNode } from "@/lib/workspace/model";
 
 function RequestTabs({ request }: { request: RequestNode }) {
   const {
