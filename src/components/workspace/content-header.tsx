@@ -2,7 +2,7 @@ import { useWorkspace } from "@/components/workspace/workspace-context";
 import { cn } from "@/lib/utils";
 import { FileCog, Plus, Settings, X } from "lucide-react";
 import { METHOD_COLOR } from "@/components/workspace/method-color";
-import type { RequestNode, TreeNode } from "@/components/workspace/mock-data";
+import type { RequestNode, TreeNode } from "@/lib/workspace/model";
 import {
   DndContext,
   PointerSensor,

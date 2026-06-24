@@ -24,12 +24,6 @@ impl Drop for CancelGuard {
     }
 }
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! Greetings from Tauri.", name)
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct KeyValue {
     key: String,
@@ -132,7 +126,6 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
             send_http_request,
             cancel_http_request
         ])
@@ -143,16 +136,6 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn should_greet_with_name_when_given_one() {
-        assert_eq!(greet("World"), "Hello, World! Greetings from Tauri.");
-    }
-
-    #[test]
-    fn should_greet_with_empty_name_when_name_is_blank() {
-        assert_eq!(greet(""), "Hello, ! Greetings from Tauri.");
-    }
 
     #[test]
     fn should_deserialize_the_wire_request_from_the_frontend_camel_case_shape() {

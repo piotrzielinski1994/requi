@@ -1,4 +1,4 @@
-import type { KeyValue } from "@/components/workspace/mock-data";
+import type { KeyValue } from "@/lib/workspace/model";
 
 export function KeyValueTable({
   rows,

@@ -2,22 +2,55 @@ import { useState } from "react";
 import { createRoute } from "@tanstack/react-router";
 import { WorkspaceLoader } from "@/components/workspace/workspace-loader";
 import { createTauriWorkspaceFs } from "@/lib/workspace/tauri-fs";
-import { createTauriFolderPicker } from "@/lib/workspace/folder-picker";
+import { createInMemoryWorkspaceFs } from "@/lib/workspace/in-memory-fs";
+import {
+  createTauriFolderPicker,
+  createNoopFolderPicker,
+} from "@/lib/workspace/folder-picker";
 import { createTauriHttpClient } from "@/lib/http/tauri-client";
+import { createFakeHttpClient } from "@/lib/http/fake-client";
 import { createQuickJsScriptRunner } from "@/lib/scripts/quickjs-runner";
+import { isDevBrowser } from "@/lib/runtime/environment";
+import {
+  DEMO_RESPONSE,
+  DEMO_WORKSPACE_PATH,
+  demoFiles,
+} from "@/lib/workspace/demo-seed";
+import type { WorkspaceFs } from "@/lib/workspace/fs";
+import type { FolderPicker } from "@/lib/workspace/folder-picker";
+import type { HttpClient } from "@/lib/http/model";
 import { rootRoute } from "@/routes/__root";
 
+type Adapters = {
+  fs: WorkspaceFs;
+  picker: FolderPicker;
+  httpClient: HttpClient;
+};
+
+function createAdapters(): Adapters {
+  if (isDevBrowser()) {
+    return {
+      fs: createInMemoryWorkspaceFs({ [DEMO_WORKSPACE_PATH]: demoFiles() }),
+      picker: createNoopFolderPicker(),
+      httpClient: createFakeHttpClient({ ok: true, response: DEMO_RESPONSE }),
+    };
+  }
+  return {
+    fs: createTauriWorkspaceFs(),
+    picker: createTauriFolderPicker(),
+    httpClient: createTauriHttpClient(),
+  };
+}
+
 function HomePage() {
-  const [workspaceFs] = useState(createTauriWorkspaceFs);
-  const [picker] = useState(createTauriFolderPicker);
-  const [httpClient] = useState(createTauriHttpClient);
+  const [adapters] = useState(createAdapters);
   const [scriptRunner] = useState(createQuickJsScriptRunner);
 
   return (
     <WorkspaceLoader
-      fs={workspaceFs}
-      picker={picker}
-      httpClient={httpClient}
+      fs={adapters.fs}
+      picker={adapters.picker}
+      httpClient={adapters.httpClient}
       scriptRunner={scriptRunner}
     />
   );

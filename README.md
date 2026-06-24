@@ -28,16 +28,21 @@ npm install
 | Command | Description |
 | --- | --- |
 | `npm start` | Launch the desktop app (`tauri dev`) - native window + Vite dev server. |
-| `npm run dev` | Frontend-only Vite dev server (browser, no native shell). |
+| `npm run dev` | Frontend-only Vite dev server (browser, no native shell) - seeds a demo workspace so the UI is interactive without a Tauri host. |
 | `npm run build` | Typecheck + production frontend build (`dist/`). |
 | `npm run tauri build` | Produce a native desktop bundle. |
 | `npm run lint` | ESLint (flat config). |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run format` | Prettier write. |
-| `npm test` | Frontend behavior tests (Vitest, run once). |
+| `npm test` | Frontend behavior + integration tests (Vitest, run once). |
 | `npm run test:watch` | Vitest in watch mode. |
+| `npm run e2e` | Playwright E2E against the `npm run dev` build (starts the dev server itself). |
 
 Rust backend tests: `cd src-tauri && cargo test`.
+
+> E2E prerequisite (one-time): `npx playwright install` to fetch the browser. E2E drives the
+> browser build wired to fakes (in-memory fs + fake HTTP), not the native Tauri boundary - that
+> stays covered by `cargo test`.
 
 > The home route renders the workspace layout (sidebar collection tree, request tabs,
 > URL bar, request/response panes, console). The URL bar is editable (URL field + method
@@ -206,17 +211,21 @@ src/
   main.tsx              React entry: providers + RouterProvider
   router.tsx            Code-based TanStack Router assembly
   app/providers.tsx     QueryClientProvider + HotkeysProvider
-  routes/               __root (layout + 404), index (workspace home), settings
+  routes/               __root (layout + 404), index (workspace home); dev build wires fakes + demo seed
   components/
     workspace/          workspace layout: sidebar tree, tabs, panes, console, loader
     ui/                 shadcn primitives
-  lib/                  tauri.ts (typed invoke wrappers), utils.ts (cn)
+  lib/                  utils.ts (cn)
+    runtime/            environment.ts (isDevBrowser: gates the dev-browser fakes)
     http/               HTTP loop: buildHttpRequest, filterJson, HttpClient port + Tauri/fake adapters
     settings/           per-installation settings: model + port, Tauri-store + in-memory adapters, provider
-    workspace/          workspace domain: model, resolveConfig, disk-format (serialize/deserialize), fs port + adapters
+    workspace/          workspace domain: model, resolveConfig, disk-format, fs port + adapters, demo-seed
   index.css             Tailwind v4 + theme tokens
   test/setup.ts         Vitest + Testing Library setup
-src-tauri/              Rust desktop shell (greet command, tauri.conf.json)
-tests/e2e/              Behavior smoke tests
+src-tauri/              Rust desktop shell (send_http_request/cancel_http_request, tauri.conf.json)
+tests/
+  e2e/                  Playwright specs (*.e2e.ts) against the dev-browser build
+  integration/          Vitest jsdom routing/app-shell tests (*.spec.tsx)
+playwright.config.ts    Playwright config (webServer = npm run dev on :1430)
 docs/                   spec/plan per feature, ADR, learnings
 ```

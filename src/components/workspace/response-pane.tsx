@@ -8,7 +8,7 @@ import {
   PANE_TABS_TRIGGER,
 } from "@/components/workspace/pane-tabs";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { RequestResponse } from "@/components/workspace/mock-data";
+import type { RequestResponse } from "@/lib/workspace/model";
 import { filterJson } from "@/lib/http/filter";
 import {
   RESPONSE_RENDER_LIMIT_BYTES,

@@ -1,17 +1,17 @@
-export type {
-  HttpMethod,
-  KeyValue,
-  BodyMode,
-  Auth,
-  ScriptConfig,
-  ConfigScope,
-  RequestResponse,
-  RequestNode,
-  FolderNode,
-  TreeNode,
-} from "@/lib/workspace/model";
-
+import type { HttpResponse } from "@/lib/http/model";
+import {
+  deserialize,
+  serialize,
+  type FileMap,
+} from "@/lib/workspace/disk-format";
 import type { RequestNode, TreeNode } from "@/lib/workspace/model";
+
+// In-memory fs key + dev-build settings `workspacePath`. The `npm run dev`
+// browser build seeds this path so the workspace renders instead of the empty
+// state (see `isDevBrowser`).
+export const DEMO_WORKSPACE_PATH = "demo";
+
+const WORKSPACE_NAME = "Demo";
 
 const tokenRequest: RequestNode = {
   kind: "request",
@@ -164,7 +164,11 @@ const healthRequest: RequestNode = {
   },
 };
 
-export const mockTree: TreeNode[] = [
+// Hand-authored source. `serialize` drops `response`/synthetic ids and
+// `deserialize` regenerates path-based ids, so the exported `demoTree` below is
+// the round-tripped (canonical, loader-shaped) form - a fixed point of the disk
+// format, which is exactly what the dev-build loader reads back.
+const seedSource: TreeNode[] = [
   {
     kind: "folder",
     id: "f-auth",
@@ -206,9 +210,34 @@ export const mockTree: TreeNode[] = [
   healthRequest,
 ];
 
-export const mockConsoleLines: string[] = [
+const seedFiles: FileMap = serialize(seedSource, WORKSPACE_NAME);
+
+const parsedSeed = deserialize(seedFiles);
+
+// The canonical, loader-shaped demo tree (path-based ids, no `response`). Equal
+// to `deserialize(demoFiles()).tree` by construction.
+export const demoTree: TreeNode[] = parsedSeed.ok ? parsedSeed.tree : seedSource;
+
+export const demoConsoleLines: string[] = [
   "[12:00:00] Ready.",
   "→ POST {{baseUrl}}/oauth/token  200",
   "← 142ms · 248B",
   "[script] pre-request ok",
 ];
+
+// Canned success the fake HTTP client returns in the dev-browser build, so a
+// Send shows a real response instead of the "no Tauri host" fake error.
+export const DEMO_RESPONSE: HttpResponse = {
+  status: 200,
+  timeMs: 142,
+  sizeBytes: 36,
+  body: '{\n  "ok": true,\n  "demo": true\n}',
+  headers: [{ key: "Content-Type", value: "application/json" }],
+};
+
+// The demo tree serialized to the on-disk format, so the dev-build loader reads
+// it back through the real `deserialize` path (and the seed can't drift from a
+// shape the loader would reject).
+export function demoFiles(): FileMap {
+  return seedFiles;
+}

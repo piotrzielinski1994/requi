@@ -11,7 +11,7 @@ import { METHOD_COLOR } from "@/components/workspace/method-color";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { TokenHighlight } from "@/components/workspace/var-token";
 import type { EffectiveConfig } from "@/lib/workspace/resolve";
-import type { HttpMethod } from "@/components/workspace/mock-data";
+import type { HttpMethod } from "@/lib/workspace/model";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 

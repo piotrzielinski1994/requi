@@ -7,7 +7,7 @@ import {
 import { BodyEditor } from "@/components/workspace/body-editor";
 import { EditableKeyValueTable } from "@/components/workspace/editable-key-value-table";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import type { BodyMode, RequestNode } from "@/components/workspace/mock-data";
+import type { BodyMode, RequestNode } from "@/lib/workspace/model";
 
 const BODY_MODE_LABELS: Record<BodyMode, string> = {
   json: "JSON",

@@ -2,7 +2,7 @@ import type {
   RequestNode,
   FolderNode,
   TreeNode,
-} from "@/components/workspace/mock-data";
+} from "@/lib/workspace/model";
 
 // Small, explicit fixture tree used by all workspace tests.
 // Shape mirrors spec section 4 (TreeNode/RequestNode/FolderNode discriminated unions).
