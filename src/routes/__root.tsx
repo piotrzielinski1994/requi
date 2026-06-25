@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from "@/lib/settings/settings";
 import { isDevBrowser } from "@/lib/runtime/environment";
 import { DEMO_WORKSPACE_PATH } from "@/lib/workspace/demo-seed";
 import { ToastProvider } from "@/components/ui/toast";
+import { ThemeProvider } from "@/lib/theme/theme-context";
 
 function createSettingsStore() {
   if (isDevBrowser()) {
@@ -23,9 +24,11 @@ function RootLayout() {
 
   return (
     <SettingsProvider store={settingsStore}>
-      <ToastProvider>
-        <Outlet />
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <Outlet />
+        </ToastProvider>
+      </ThemeProvider>
     </SettingsProvider>
   );
 }

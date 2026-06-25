@@ -1,7 +1,8 @@
 import CodeMirror from "@uiw/react-codemirror";
+import type { Extension } from "@codemirror/state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-import { jsonViewerExtensions } from "@/components/workspace/editor-theme";
+import { useEditorExtensions } from "@/components/workspace/use-editor-extensions";
 import {
   consoleLineLevel,
   parseConsoleObjectLine,
@@ -17,23 +18,27 @@ const LEVEL_CLASS: Record<ConsoleLevel, string> = {
   muted: "text-muted-foreground",
 };
 
-// JSON token colors, matching the Darcula scheme of the body editor / response
-// viewer so a logged object reads the same everywhere.
-const TOKEN_COLOR: Record<Exclude<TokenKind, "plain">, string> = {
-  key: "#9876aa",
-  string: "#6a8759",
-  number: "#6897bb",
-  keyword: "#cc7832",
-};
+// JSON token colors follow the active editor scheme so a logged object/value
+// reads the same as the body editor / response viewer (and recolors with the
+// theme). The console token kinds map onto the editor syntax tokens.
+type TokenColors = Record<Exclude<TokenKind, "plain">, string>;
 
-function TokenizedLine({ level, line }: { level: ConsoleLevel; line: string }) {
+function TokenizedLine({
+  level,
+  line,
+  tokenColors,
+}: {
+  level: ConsoleLevel;
+  line: string;
+  tokenColors: TokenColors;
+}) {
   return (
     <span className={LEVEL_CLASS[level]}>
       {tokenizeConsoleLine(line).map((token, index) =>
         token.kind === "plain" ? (
           <span key={index}>{token.text}</span>
         ) : (
-          <span key={index} style={{ color: TOKEN_COLOR[token.kind] }}>
+          <span key={index} style={{ color: tokenColors[token.kind] }}>
             {token.text}
           </span>
         ),
@@ -42,7 +47,15 @@ function TokenizedLine({ level, line }: { level: ConsoleLevel; line: string }) {
   );
 }
 
-function ConsoleLine({ line }: { line: string }) {
+function ConsoleLine({
+  line,
+  viewerExtensions,
+  tokenColors,
+}: {
+  line: string;
+  viewerExtensions: Extension[];
+  tokenColors: TokenColors;
+}) {
   const level = consoleLineLevel(line);
   // warn/error stay a solid severity color (readability of the level wins over
   // token coloring); log/muted lines get JSON syntax coloring.
@@ -63,18 +76,25 @@ function ConsoleLine({ line }: { line: string }) {
           value={object.json}
           theme="none"
           editable={false}
-          extensions={jsonViewerExtensions}
+          extensions={viewerExtensions}
           basicSetup={{ lineNumbers: false, foldGutter: true }}
           className="text-xs"
         />
       </span>
     );
   }
-  return <TokenizedLine level={level} line={line} />;
+  return <TokenizedLine level={level} line={line} tokenColors={tokenColors} />;
 }
 
 export function Console() {
   const { consoleLines } = useWorkspace();
+  const { consoleViewerExtensions, editorColors } = useEditorExtensions();
+  const tokenColors: TokenColors = {
+    key: editorColors.property,
+    string: editorColors.string,
+    number: editorColors.number,
+    keyword: editorColors.keyword,
+  };
 
   return (
     <section
@@ -88,7 +108,11 @@ export function Console() {
         <ul className="p-2">
           {consoleLines.map((line, index) => (
             <li key={index} className="py-0.5 whitespace-pre-wrap">
-              <ConsoleLine line={line} />
+              <ConsoleLine
+                line={line}
+                viewerExtensions={consoleViewerExtensions}
+                tokenColors={tokenColors}
+              />
             </li>
           ))}
         </ul>

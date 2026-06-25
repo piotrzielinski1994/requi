@@ -1,21 +1,5 @@
 import CodeMirror from "@uiw/react-codemirror";
-import { json } from "@codemirror/lang-json";
-import { closeBrackets } from "@codemirror/autocomplete";
-import { syntaxHighlighting } from "@codemirror/language";
-import { linter } from "@codemirror/lint";
-import {
-  darculaChrome,
-  darculaHighlight,
-  emptyTolerantJsonLinter,
-} from "@/components/workspace/editor-theme";
-
-const extensions = [
-  json(),
-  closeBrackets(),
-  linter(emptyTolerantJsonLinter()),
-  darculaChrome,
-  syntaxHighlighting(darculaHighlight),
-];
+import { useEditorExtensions } from "@/components/workspace/use-editor-extensions";
 
 type BodyEditorProps = {
   value: string;
@@ -23,12 +7,13 @@ type BodyEditorProps = {
 };
 
 export function BodyEditor({ value, onChange }: BodyEditorProps) {
+  const { bodyExtensions } = useEditorExtensions();
   return (
     <CodeMirror
       value={value}
       onChange={onChange}
       theme="none"
-      extensions={extensions}
+      extensions={bodyExtensions}
       basicSetup={{ lineNumbers: false }}
       height="100%"
       className="h-full text-xs"

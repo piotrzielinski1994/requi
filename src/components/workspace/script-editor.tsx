@@ -2,13 +2,9 @@ import { useMemo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { autocompletion, closeBrackets } from "@codemirror/autocomplete";
-import { syntaxHighlighting } from "@codemirror/language";
 import { linter, lintGutter } from "@codemirror/lint";
 import { EditorView } from "@codemirror/view";
-import {
-  darculaChrome,
-  darculaHighlight,
-} from "@/components/workspace/editor-theme";
+import { useEditorExtensions } from "@/components/workspace/use-editor-extensions";
 import { scriptApiCompletion } from "@/components/workspace/script-api-complete";
 import { jsSyntaxLinter } from "@/components/workspace/script-lint";
 import { jsUndefLinter } from "@/components/workspace/script-eslint";
@@ -29,6 +25,7 @@ export function ScriptEditor({
   onBlur,
   ariaLabel,
 }: ScriptEditorProps) {
+  const { scriptChrome, scriptHighlight } = useEditorExtensions();
   const extensions = useMemo(
     () => [
       javascript(),
@@ -38,13 +35,13 @@ export function ScriptEditor({
       // no-undef, stage-aware globals).
       linter((view) => [...jsSyntaxLinter()(view), ...jsUndefLinter(stage)(view)]),
       lintGutter(),
-      darculaChrome,
-      syntaxHighlighting(darculaHighlight),
+      scriptChrome,
+      scriptHighlight,
       // Mirror the aria-label onto the CM content node so the existing
       // getByLabelText query still resolves the editor.
       EditorView.contentAttributes.of({ "aria-label": ariaLabel }),
     ],
-    [stage, ariaLabel],
+    [stage, ariaLabel, scriptChrome, scriptHighlight],
   );
   return (
     <CodeMirror

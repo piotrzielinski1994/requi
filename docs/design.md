@@ -38,7 +38,7 @@ UI design rules for this app. Entries are about *visual language and interaction
 
 ## Color & status
 
-- Theme via CSS tokens (`bg-background`, `bg-muted/30`, `text-foreground`, `border-border`), not hard-coded colors, so light/dark both work.
+- Theme via CSS tokens (`bg-background`, `bg-muted/30`, `text-foreground`, `border-border`), not hard-coded colors, so light/dark both work. The theme is **user-selectable** (light / dark / system) and **per-mode customizable** (Settings -> Theme): mode lives in `settings.json`, custom token overrides in `theme.json`, applied as inline CSS vars on `<html>` over the `:root`/`.dark` defaults in `index.css`. The `.dark` class is live (was dead before themes shipped). Always use the tokens, never hard-coded hex - that's what lets a user's custom colors and the mode switch take effect. CodeMirror editors theme via the `useEditorExtensions` hook (color-driven factories in `editor-theme.ts`), not hardcoded hex.
 - Status colors: success green (`text-green-600 dark:text-green-400`), error/destructive red (`text-red-600 dark:text-red-400`). A destructive action button (e.g. Disconnect) is filled red.
 - Status dots are a small `size-2` filled circle, right-aligned, never with a text label leaking into an accessible name (give the row an explicit `aria-label`).
 

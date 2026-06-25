@@ -91,6 +91,7 @@ describe("SettingsProvider", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     };
     const store = createInMemorySettingsStore(seeded);
 

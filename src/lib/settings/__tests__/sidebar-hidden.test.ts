@@ -49,6 +49,7 @@ describe("mergeSettings sidebarHidden", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: { mode: "system", colors: DEFAULT_SETTINGS.theme.colors },
     };
 
     expect(mergeSettings(DEFAULT_SETTINGS, full)).toEqual(full);

@@ -8,6 +8,69 @@ export type PanelLayout = Record<string, number>;
 
 export type PanelGroupKey = "workspace" | "main" | "content";
 
+export type ThemeMode = "light" | "dark" | "system";
+
+export type AppTokenName =
+  | "background"
+  | "foreground"
+  | "card"
+  | "card-foreground"
+  | "popover"
+  | "popover-foreground"
+  | "primary"
+  | "primary-foreground"
+  | "secondary"
+  | "secondary-foreground"
+  | "muted"
+  | "muted-foreground"
+  | "accent"
+  | "accent-foreground"
+  | "destructive"
+  | "border"
+  | "input"
+  | "ring";
+
+export type EditorTokenName =
+  | "caret"
+  | "selection"
+  | "gutter"
+  | "keyword"
+  | "string"
+  | "number"
+  | "property"
+  | "comment"
+  | "invalid";
+
+// Sparse per-mode override maps. An absent key means "use the built-in default
+// for that token in that mode" (defaults live in src/lib/theme/theme-defaults).
+export type ThemeColorOverrides = {
+  tokens: Partial<Record<AppTokenName, string>>;
+  editor: Partial<Record<EditorTokenName, string>>;
+};
+
+export type ThemeColors = {
+  light: ThemeColorOverrides;
+  dark: ThemeColorOverrides;
+};
+
+// The complete (non-sparse) built-in default set: every token is present in both
+// modes. Assignable to ThemeColors (a full record satisfies the partial), so it
+// flows into applyDefaults/diffOverrides unchanged.
+export type FullThemeColorOverrides = {
+  tokens: Record<AppTokenName, string>;
+  editor: Record<EditorTokenName, string>;
+};
+
+export type FullThemeColors = {
+  light: FullThemeColorOverrides;
+  dark: FullThemeColorOverrides;
+};
+
+export type ThemeSettings = {
+  mode: ThemeMode;
+  colors: ThemeColors;
+};
+
 export type Settings = {
   version: 1;
   layouts: Partial<Record<PanelGroupKey, PanelLayout>>;
@@ -16,9 +79,16 @@ export type Settings = {
   shortcuts: ShortcutOverrides;
   openRequestIds: string[];
   activeRequestId: string | null;
+  theme: ThemeSettings;
   workspacePath?: string;
   activeEnvironment?: string;
 };
+
+const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
+
+function emptyThemeColors(): ThemeColors {
+  return { light: { tokens: {}, editor: {} }, dark: { tokens: {}, editor: {} } };
+}
 
 export type SettingsStore = {
   load: () => Promise<Settings>;
@@ -33,6 +103,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: {},
   openRequestIds: [],
   activeRequestId: null,
+  theme: { mode: "system", colors: emptyThemeColors() },
 };
 
 const GROUP_KEYS: PanelGroupKey[] = ["workspace", "main", "content"];
@@ -83,6 +154,91 @@ function mergeOpenRequestIds(value: unknown): string[] {
   return value.filter((id): id is string => typeof id === "string");
 }
 
+function isThemeMode(value: unknown): value is ThemeMode {
+  return typeof value === "string" && THEME_MODES.includes(value as ThemeMode);
+}
+
+const APP_TOKEN_NAMES = new Set<string>([
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "destructive",
+  "border",
+  "input",
+  "ring",
+]);
+
+const EDITOR_TOKEN_NAMES = new Set<string>([
+  "caret",
+  "selection",
+  "gutter",
+  "keyword",
+  "string",
+  "number",
+  "property",
+  "comment",
+  "invalid",
+]);
+
+function mergeTokenMap<K extends string>(
+  value: unknown,
+  known: Set<string>,
+): Partial<Record<K, string>> {
+  if (!isRecord(value)) {
+    return {};
+  }
+  return Object.entries(value).reduce<Partial<Record<K, string>>>(
+    (acc, [key, val]) => {
+      if (!known.has(key) || typeof val !== "string") {
+        return acc;
+      }
+      return { ...acc, [key]: val };
+    },
+    {},
+  );
+}
+
+function mergeOverrides(value: unknown): ThemeColorOverrides {
+  if (!isRecord(value)) {
+    return { tokens: {}, editor: {} };
+  }
+  return {
+    tokens: mergeTokenMap<AppTokenName>(value.tokens, APP_TOKEN_NAMES),
+    editor: mergeTokenMap<EditorTokenName>(value.editor, EDITOR_TOKEN_NAMES),
+  };
+}
+
+function mergeThemeColors(value: unknown): ThemeColors {
+  if (!isRecord(value)) {
+    return emptyThemeColors();
+  }
+  return {
+    light: mergeOverrides(value.light),
+    dark: mergeOverrides(value.dark),
+  };
+}
+
+function mergeTheme(defaults: ThemeSettings, partial: unknown): ThemeSettings {
+  if (!isRecord(partial)) {
+    return defaults;
+  }
+  return {
+    mode: isThemeMode(partial.mode) ? partial.mode : defaults.mode,
+    colors: mergeThemeColors(partial.colors),
+  };
+}
+
 export function mergeSettings(defaults: Settings, partial: unknown): Settings {
   if (!isRecord(partial)) {
     return defaults;
@@ -107,6 +263,7 @@ export function mergeSettings(defaults: Settings, partial: unknown): Settings {
     shortcuts: mergeShortcuts(partial.shortcuts),
     openRequestIds,
     activeRequestId,
+    theme: mergeTheme(defaults.theme, partial.theme),
     workspacePath:
       typeof partial.workspacePath === "string"
         ? partial.workspacePath
