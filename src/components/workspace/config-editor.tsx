@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
-import { json } from "@codemirror/lang-json";
-import { syntaxHighlighting } from "@codemirror/language";
-import { linter, lintGutter } from "@codemirror/lint";
-import {
-  darculaChrome,
-  darculaHighlight,
-  emptyTolerantJsonLinter,
-} from "@/components/workspace/editor-theme";
+import { useEditorExtensions } from "@/components/workspace/use-editor-extensions";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type {
   BodyMode,
@@ -21,14 +14,6 @@ import type { RequestPatch } from "@/lib/workspace/update-request";
 import { updateNodeConfig } from "@/lib/workspace/update-config";
 import { updateRequest } from "@/lib/workspace/update-request";
 import { bodyToStored, storedToBody } from "@/lib/workspace/body-codec";
-
-const extensions = [
-  json(),
-  linter(emptyTolerantJsonLinter()),
-  lintGutter(),
-  darculaChrome,
-  syntaxHighlighting(darculaHighlight),
-];
 
 function parseObject(text: string): Record<string, unknown> | null {
   try {
@@ -51,7 +36,7 @@ function parseObject(text: string): Record<string, unknown> | null {
 // Mod+S or the close-confirm popup; invalid JSON shows a red lint underline and
 // makes the descriptor non-saveable (`canSave:false`). `parse` returns null for
 // invalid input; `commit` folds the parsed value into a tree.
-function RawJsonEditor<T>({
+export function RawJsonEditor<T>({
   id,
   saved,
   parse,
@@ -65,6 +50,7 @@ function RawJsonEditor<T>({
   commit: (parsed: T, tree: TreeNode[]) => TreeNode[];
 }) {
   const { registerActiveEditor } = useWorkspace();
+  const { configExtensions } = useEditorExtensions();
   const [text, setText] = useState(saved);
 
   // Re-seed when the saved snapshot changes (node switch, or a sibling panel's
@@ -113,7 +99,7 @@ function RawJsonEditor<T>({
         value={text}
         onChange={setText}
         theme="none"
-        extensions={extensions}
+        extensions={configExtensions}
         height="100%"
         className="h-full text-xs"
       />

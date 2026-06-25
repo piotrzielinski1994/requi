@@ -11,6 +11,7 @@ import { ResponsePane } from "@/components/workspace/response-pane";
 import { FolderPane } from "@/components/workspace/folder-pane";
 import { EnvEditor } from "@/components/workspace/env-editor";
 import { ShortcutsSection } from "@/components/settings/shortcuts-section";
+import { ThemeSection } from "@/components/settings/theme-section";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import { useSettings } from "@/lib/settings/settings-context";
 
@@ -52,7 +53,8 @@ export function Content() {
     if (isSettingsActive) {
       return (
         <ScrollArea className="flex-1">
-          <div className="p-6">
+          <div className="flex flex-col gap-8 p-6">
+            <ThemeSection />
             <ShortcutsSection />
           </div>
         </ScrollArea>

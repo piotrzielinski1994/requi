@@ -13,6 +13,8 @@ import {
   type PanelLayout,
   type Settings,
   type SettingsStore,
+  type ThemeColors,
+  type ThemeMode,
 } from "@/lib/settings/settings";
 import type { ShortcutActionId } from "@/lib/shortcuts/registry";
 
@@ -29,6 +31,8 @@ type SettingsContextValue = {
     activeRequestId: string | null,
   ) => void;
   saveActiveEnvironment: (name: string | null) => void;
+  saveThemeMode: (mode: ThemeMode) => void;
+  saveThemeColors: (colors: ThemeColors) => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -121,6 +125,18 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
     [update],
   );
 
+  const saveThemeMode = useCallback(
+    (mode: ThemeMode) =>
+      update((base) => ({ ...base, theme: { ...base.theme, mode } })),
+    [update],
+  );
+
+  const saveThemeColors = useCallback(
+    (colors: ThemeColors) =>
+      update((base) => ({ ...base, theme: { ...base.theme, colors } })),
+    [update],
+  );
+
   const value = useMemo<SettingsContextValue | null>(
     () =>
       settings === null
@@ -135,6 +151,8 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
             resetShortcut,
             saveOpenTabs,
             saveActiveEnvironment,
+            saveThemeMode,
+            saveThemeColors,
           },
     [
       settings,
@@ -146,6 +164,8 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
       resetShortcut,
       saveOpenTabs,
       saveActiveEnvironment,
+      saveThemeMode,
+      saveThemeColors,
     ],
   );
 

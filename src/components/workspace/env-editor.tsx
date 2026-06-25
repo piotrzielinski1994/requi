@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
-import { syntaxHighlighting } from "@codemirror/language";
-import {
-  darculaChrome,
-  darculaHighlight,
-} from "@/components/workspace/editor-theme";
+import { useEditorExtensions } from "@/components/workspace/use-editor-extensions";
 import { useWorkspace } from "@/components/workspace/workspace-context";
-
-const extensions = [darculaChrome, syntaxHighlighting(darculaHighlight)];
 
 // No Save bar - saved via Mod+S or the close-confirm popup. `.env` is free text
 // (always saveable), so no `commitToTree`; save writes envText directly.
 function EnvEditorForm({ seed }: { seed: string }) {
   const { saveEnv, registerActiveEditor } = useWorkspace();
+  const { envExtensions } = useEditorExtensions();
   const [text, setText] = useState(seed);
 
   const saveRef = useRef<() => void>(() => {});
@@ -37,7 +32,7 @@ function EnvEditorForm({ seed }: { seed: string }) {
         value={text}
         onChange={setText}
         theme="none"
-        extensions={extensions}
+        extensions={envExtensions}
         height="100%"
         className="h-full text-xs"
       />

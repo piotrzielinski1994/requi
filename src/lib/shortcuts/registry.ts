@@ -3,6 +3,7 @@ export type ShortcutActionId =
   | "close-settings"
   | "toggle-console"
   | "toggle-sidebar"
+  | "toggle-theme"
   | "next-request"
   | "prev-request"
   | "close-request"
@@ -53,6 +54,12 @@ export const SHORTCUT_ACTIONS: readonly ShortcutAction[] = [
     name: "Toggle sidebar",
     description: "Show or hide the collection sidebar.",
     defaultHotkey: "Mod+B",
+  },
+  {
+    id: "toggle-theme",
+    name: "Toggle theme",
+    description: "Cycle the theme: light, dark, system.",
+    defaultHotkey: "Mod+Shift+L",
   },
   {
     id: "next-request",

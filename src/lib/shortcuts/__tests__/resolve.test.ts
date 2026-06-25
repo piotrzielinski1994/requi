@@ -16,6 +16,7 @@ const ACTION_IDS: ShortcutActionId[] = [
   "close-settings",
   "toggle-console",
   "toggle-sidebar",
+  "toggle-theme",
   "next-request",
   "prev-request",
   "close-request",

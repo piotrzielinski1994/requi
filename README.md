@@ -92,12 +92,23 @@ download links 404 immediately. Anyone who already downloaded keeps their local 
 > persisted until the workspace reloads from disk).
 > Keyboard-shortcut overrides are stored separately in a `keymap.json` in the same dir, so
 > a user can sync their keymap across devices independently of the device-local UI state.
+> The **theme** splits the same way: the chosen mode (light / dark / system) is device-local
+> UI state in `settings.json` (`theme.mode`), while per-mode **custom colors** live in their own
+> `theme.json` so a color scheme is syncable on its own. The Settings tab's **Theme** section has
+> a mode selector plus a raw-JSON editor for the colors (18 app tokens + 9 editor-syntax tokens
+> per mode, as `oklch(...)` strings); only values that differ from the built-in default are saved,
+> and editing one back to its default clears the override. **System** follows the OS
+> `prefers-color-scheme` and flips live. A **Toggle theme** command (`Mod+Shift+L`, also in the
+> command palette) cycles light -> dark -> system without opening Settings, showing a toast naming
+> the chosen mode (System spells out the resolved scheme, e.g. `Theme: System (dark)`, so the
+> switch is legible even when the OS is already dark). The six CodeMirror editors (request body, response viewer,
+> config / `.env` / script, console) follow the active mode and honor the custom editor colors.
 > In `npm run dev` (browser, no native shell) there is no Tauri host, so settings fall back
 > to defaults and saving is a no-op.
 >
 > Every wired action has a configurable keyboard shortcut (TanStack Hotkeys). Defaults:
 > open settings `Mod+Shift+S`, close settings `Esc`, toggle console `Mod+J`, toggle sidebar
-> `Mod+B`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, close all
+> `Mod+B`, toggle theme `Mod+Shift+L`, next/prev request `Ctrl+Tab`/`Ctrl+Shift+Tab`, close request `Mod+W`, close all
 > request tabs `Mod+Shift+W`, new request `Mod+T`, open workspace `Mod+O`, send request
 > `Mod+Enter`, copy as cURL `Mod+Shift+C`, import cURL `Mod+Shift+I`, import Bruno collection
 > `Mod+Shift+B`, command palette `Mod+K`

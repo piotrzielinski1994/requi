@@ -21,6 +21,7 @@ describe("createInMemorySettingsStore", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     };
     const store = createInMemorySettingsStore(initial);
 
@@ -38,6 +39,7 @@ describe("createInMemorySettingsStore", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     };
 
     await store.save(saved);
@@ -57,6 +59,7 @@ describe("createInMemorySettingsStore", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     });
     await store.save({
       version: 1,
@@ -66,6 +69,7 @@ describe("createInMemorySettingsStore", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     });
 
     expect(await store.load()).toEqual({
@@ -76,6 +80,7 @@ describe("createInMemorySettingsStore", () => {
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,
+      theme: DEFAULT_SETTINGS.theme,
     });
   });
 });

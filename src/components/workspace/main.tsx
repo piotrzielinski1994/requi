@@ -21,6 +21,9 @@ import {
   SHORTCUT_ACTIONS,
   type ShortcutActionId,
 } from "@/lib/shortcuts/registry";
+import { cycleThemeMode } from "@/lib/theme/cycle-mode";
+import { themeToggleMessage } from "@/lib/theme/toggle-message";
+import { useToast } from "@/components/ui/toast";
 import type { FolderPicker } from "@/lib/workspace/folder-picker";
 import type { BrunoCollectionReader } from "@/lib/bruno/reader";
 
@@ -37,6 +40,7 @@ export function Main({
     saveConsoleHidden,
     saveSidebarHidden,
     saveWorkspacePath,
+    saveThemeMode,
   } = useSettings();
   const {
     openRequestIds,
@@ -62,7 +66,18 @@ export function Main({
     openCurlImport,
     importBruno,
   } = useWorkspace();
+  const { show: showToast } = useToast();
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+
+  const toggleTheme = () => {
+    const next = cycleThemeMode(settings.theme.mode);
+    saveThemeMode(next);
+    const prefersDark =
+      typeof window !== "undefined" &&
+      !!window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    showToast(themeToggleMessage(next, prefersDark));
+  };
 
   const stepRequest = (delta: number) => {
     if (activeRequestId === null) {
@@ -122,6 +137,7 @@ export function Main({
     "close-settings": closeSettings,
     "toggle-console": () => saveConsoleHidden(!settings.consoleHidden),
     "toggle-sidebar": () => saveSidebarHidden(!settings.sidebarHidden),
+    "toggle-theme": toggleTheme,
     "next-request": () => stepRequest(1),
     "prev-request": () => stepRequest(-1),
     "close-request": () => {
