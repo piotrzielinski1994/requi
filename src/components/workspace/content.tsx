@@ -3,6 +3,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ContentHeader } from "@/components/workspace/content-header";
 import { UrlBar } from "@/components/workspace/url-bar";
 import { RequestPane } from "@/components/workspace/request-pane";
@@ -50,9 +51,11 @@ export function Content() {
   function renderBody() {
     if (isSettingsActive) {
       return (
-        <div className="flex-1 overflow-auto p-6">
-          <ShortcutsSection />
-        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-6">
+            <ShortcutsSection />
+          </div>
+        </ScrollArea>
       );
     }
     // The editor only owns the content area while it is the ACTIVE view; it can

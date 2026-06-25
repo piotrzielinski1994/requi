@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { KeyValueTable } from "@/components/workspace/key-value-table";
 import { JsonViewer } from "@/components/workspace/json-viewer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   PANE_TABS_LIST,
   PANE_TABS_TRIGGER,
@@ -26,9 +27,9 @@ function TooLargeBody({ body }: { body: string }) {
           preview.length,
         )}. Use a smaller request or a filter.`}
       </div>
-      <pre className="min-h-0 flex-1 overflow-auto p-3 font-mono text-xs">
-        {preview}
-      </pre>
+      <ScrollArea className="min-h-0 flex-1">
+        <pre className="p-3 font-mono text-xs">{preview}</pre>
+      </ScrollArea>
     </div>
   );
 }
@@ -45,9 +46,9 @@ function ResponseBody({ body }: { body: string }) {
   return (
     <>
       {filtered.ok ? (
-        <div className="min-h-0 flex-1 overflow-auto">
+        <ScrollArea className="min-h-0 flex-1">
           <JsonViewer text={filtered.text} />
-        </div>
+        </ScrollArea>
       ) : (
         <div className="flex-1 overflow-auto p-3 font-mono text-xs text-muted-foreground">
           No match

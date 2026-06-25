@@ -15,6 +15,14 @@ UI design rules for this app. Entries are about *visual language and interaction
 - Cursor signals affordance (`cursor-col-resize` / `cursor-row-resize`), not thickness.
 - Borders use the `border`/`border-border` token, 1px. Don't introduce heavier borders for emphasis - use background/spacing instead.
 
+## Scrollbars
+
+- **One scrollbar treatment everywhere: thin, square, semi-transparent, macOS-style.** Never the raw OS bar.
+- Prefer the shared `ScrollArea` (`src/components/ui/scroll-area.tsx`) for any scrollable region - it overlays (no layout gutter) and auto-hides (`type="hover"`), the macOS feel. Thin track (`w-1.5`/`h-1.5`), `bg-foreground/20` thumb (hover `/30`).
+- Surfaces that own their own scroller and can't host a `ScrollArea` (CodeMirror `.cm-scroller`, the Radix Select / cmdk Command popovers) fall back to the global `::-webkit-scrollbar` + `scrollbar-*` rule in `index.css`, tuned to match (8px, transparent track, `--foreground`-derived thumb).
+- **The thumb is square - no rounding** (the Corners rule wins over the macOS pill). "macOS-style" is delivered via thin + semi-transparent + overlay + auto-hide, not radius.
+- The content-header tab strip is the one region left on the native/global bar (a `ScrollArea` would break its `@dnd-kit` drag math).
+
 ## Tables / grids
 
 - One grid component, reused everywhere a result set is shown. All grids look identical: same row height, padding, header treatment, single-line cells (`overflow-hidden text-ellipsis whitespace-nowrap`), resizable columns.
