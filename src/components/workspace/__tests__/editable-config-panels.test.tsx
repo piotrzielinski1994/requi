@@ -10,7 +10,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 
-import { WorkspaceProvider } from "@/components/workspace/workspace-context";
+import {
+  WorkspaceProvider,
+  useWorkspace,
+} from "@/components/workspace/workspace-context";
 import { RequestPane } from "@/components/workspace/request-pane";
 import { authForType } from "@/components/workspace/config-panels";
 import { ToastProvider } from "@/components/ui/toast";
@@ -40,14 +43,35 @@ const tree: TreeNode[] = [
   },
 ];
 
+// Structured panels are draft + explicit-save: edits go into a draft and persist
+// only on the save action (Mod+S), which routes saveActiveEditor -> fallback
+// saveActiveRequest. This probe fires that path.
+function SaveProbe() {
+  const { saveActiveEditor, saveActiveRequest } = useWorkspace();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (!saveActiveEditor()) {
+          saveActiveRequest();
+        }
+      }}
+    >
+      fire save
+    </button>
+  );
+}
+
 function renderPane(onTreeChange: OnTreeChange) {
   return render(
     <ToastProvider>
       <WorkspaceProvider
         tree={tree}
         initialActiveRequestId="req-1"
+        initialOpenRequestIds={["req-1"]}
         onTreeChange={onTreeChange}
       >
+        <SaveProbe />
         <RequestPane />
       </WorkspaceProvider>
     </ToastProvider>,
@@ -62,6 +86,9 @@ const openTab = async (
   await user.click(within(tablist).getByRole("tab", { name }));
 };
 
+const fireSave = (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(screen.getByRole("button", { name: /fire save/i }));
+
 const savedConfig = (onTreeChange: ReturnType<typeof vi.fn>): ConfigScope => {
   const calls = onTreeChange.mock.calls;
   const tree = calls[calls.length - 1][0] as TreeNode[];
@@ -73,8 +100,9 @@ const savedConfig = (onTreeChange: ReturnType<typeof vi.fn>): ConfigScope => {
 };
 
 describe("editable Headers/Params panel", () => {
-  // config-grid - behavior: editing a header value commits on blur via saveNodeConfig.
-  it("should persist a header value edit on blur", async () => {
+  // config-grid - behavior: editing a header value updates the draft but does NOT
+  // persist on blur; the save action then persists the edited value.
+  it("should update the draft on blur and persist a header value edit only on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -85,6 +113,12 @@ describe("editable Headers/Params panel", () => {
     await user.type(valueInput, "text/plain");
     await user.tab();
 
+    // no autosave on blur.
+    await Promise.resolve();
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
+
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).headers).toEqual([
       { key: "Accept", value: "text/plain" },
@@ -92,8 +126,8 @@ describe("editable Headers/Params panel", () => {
   });
 
   // config-grid - behavior: typing into the trailing blank row materializes a new
-  // header (no Add-row button needed).
-  it("should persist a new header row typed into the trailing blank row", async () => {
+  // header in the draft, persisted on save (no Add-row button needed).
+  it("should persist a new header row typed into the trailing blank row on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -103,6 +137,7 @@ describe("editable Headers/Params panel", () => {
     await user.type(screen.getByLabelText("key 2"), "X-New");
     await user.type(screen.getByLabelText("value 2"), "yes");
     await user.tab();
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).headers).toEqual([
@@ -111,9 +146,10 @@ describe("editable Headers/Params panel", () => {
     ]);
   });
 
-  // config-grid - behavior: a typed-but-not-blurred edit is flushed when the
-  // panel unmounts (tab switch), so switching tabs never loses the last keystroke.
-  it("should persist a pending edit when switching tabs without blurring", async () => {
+  // config-grid - behavior: a typed-but-not-blurred edit is flushed into the draft
+  // when the panel unmounts (tab switch), so switching tabs never loses the last
+  // keystroke; it persists on a later save.
+  it("should keep a pending edit when switching tabs without blurring and persist it on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -123,6 +159,10 @@ describe("editable Headers/Params panel", () => {
     await user.type(screen.getByLabelText("value 2"), "yes");
     // No user.tab() / blur - switch straight to another tab (unmounts the panel).
     await openTab(user, "Vars");
+    // switching tabs is not a save.
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).headers).toEqual([
@@ -131,27 +171,30 @@ describe("editable Headers/Params panel", () => {
     ]);
   });
 
-  // config-grid - behavior: removing a row drops it from the saved config.
-  it("should persist removal of a param row", async () => {
+  // config-grid - behavior: removing a row drops it from the draft, persisted on save.
+  it("should persist removal of a param row on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
     await openTab(user, "Params");
 
     await user.click(screen.getByRole("button", { name: /remove page/i }));
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).params).toEqual([]);
   });
 
-  // config-grid - behavior: unchecking the row toggle persists enabled:false.
-  it("should persist enabled:false when a header is toggled off", async () => {
+  // config-grid - behavior: unchecking the row toggle records enabled:false in the
+  // draft, persisted on save.
+  it("should persist enabled:false when a header is toggled off and saved", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
     await openTab(user, "Headers");
 
     await user.click(screen.getByRole("checkbox", { name: /enable accept/i }));
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).headers).toEqual([
@@ -218,8 +261,8 @@ describe("config grid {{var}} highlighting", () => {
 });
 
 describe("editable Vars panel", () => {
-  // config-grid - behavior: editing a variable value persists it (Record form).
-  it("should persist a variable value edit on blur", async () => {
+  // config-grid - behavior: editing a variable value persists it on save (Record form).
+  it("should persist a variable value edit on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -229,6 +272,11 @@ describe("editable Vars panel", () => {
     await user.clear(valueInput);
     await user.type(valueInput, "tok-999");
     await user.tab();
+
+    await Promise.resolve();
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).variables).toEqual({ token: "tok-999" });
@@ -253,16 +301,18 @@ describe("editable Auth panel", () => {
         <WorkspaceProvider
           tree={basicTree}
           initialActiveRequestId="req-1"
+          initialOpenRequestIds={["req-1"]}
           onTreeChange={onTreeChange}
         >
+          <SaveProbe />
           <RequestPane />
         </WorkspaceProvider>
       </ToastProvider>,
     );
   };
 
-  // config-grid - behavior: editing the bearer token persists it.
-  it("should persist a bearer token edit on blur", async () => {
+  // config-grid - behavior: editing the bearer token persists it on save.
+  it("should persist a bearer token edit on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -272,6 +322,11 @@ describe("editable Auth panel", () => {
     await user.clear(token);
     await user.type(token, "new-token");
     await user.tab();
+
+    await Promise.resolve();
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).auth).toEqual({
@@ -294,8 +349,8 @@ describe("editable Auth panel", () => {
     expect(within(grid).getByLabelText(/^password$/i)).toBeInTheDocument();
   });
 
-  // config-grid - behavior: editing the basic username persists it.
-  it("should persist a basic username edit on blur", async () => {
+  // config-grid - behavior: editing the basic username persists it on save.
+  it("should persist a basic username edit on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderBasic(onTreeChange);
@@ -305,6 +360,11 @@ describe("editable Auth panel", () => {
     await user.clear(username);
     await user.type(username, "grace");
     await user.tab();
+
+    await Promise.resolve();
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).auth).toEqual({
@@ -345,7 +405,8 @@ describe("editable Auth panel", () => {
 
 // The script editor is a CodeMirror instance (not a textarea), so jsdom can't
 // type into it - drive it the body-editor way: replace the doc via the live
-// EditorView then fire a blur (the commit-on-blur path). The aria-label is
+// EditorView then fire a blur. With the explicit-save model the blur flushes the
+// edit into the draft (no persist); a later save persists it. The aria-label is
 // mirrored onto the .cm-content node, so getByLabelText still resolves it.
 async function setScript(label: RegExp, text: string) {
   const content = screen.getByLabelText(label);
@@ -355,7 +416,7 @@ async function setScript(label: RegExp, text: string) {
     throw new Error("live EditorView not found");
   }
   // Dispatch inside act so the onChange->setDraft update flushes BEFORE the blur
-  // reads the draft (else the commit-on-blur sees the stale pre-edit value).
+  // reads the draft (else the flush-on-blur sees the stale pre-edit value).
   await act(async () => {
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: text },
@@ -379,8 +440,9 @@ async function typeScriptNoBlur(label: RegExp, text: string) {
 }
 
 describe("editable Script panel", () => {
-  // config-grid - behavior: editing the pre-request script persists it.
-  it("should persist a pre-request script edit on blur", async () => {
+  // config-grid - behavior: editing the pre-request script updates the draft (no
+  // persist on blur) and persists it on save.
+  it("should persist a pre-request script edit on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -388,13 +450,19 @@ describe("editable Script panel", () => {
 
     await setScript(/pre-request/i, "console.log(1)");
 
+    await Promise.resolve();
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
+
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).scripts?.pre).toBe("console.log(1)");
   });
 
-  // behavior: a typed-but-not-blurred pre script is flushed when the stage panel
-  // unmounts (switching Pre->Post), so a tab switch never loses the edit.
-  it("should persist a pending pre script when switching to the Post stage without blurring", async () => {
+  // behavior: a typed-but-not-blurred pre script is flushed into the draft when the
+  // stage panel unmounts (switching Pre->Post), so a tab switch never loses the
+  // edit; it persists on a later save.
+  it("should keep a pending pre script when switching to the Post stage without blurring and persist it on save", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -404,14 +472,17 @@ describe("editable Script panel", () => {
     // No blur - switch the stage tab (unmounts the Pre panel).
     const stages = screen.getByRole("tablist", { name: /script stage/i });
     await user.click(within(stages).getByRole("tab", { name: "Post" }));
+    expect(onTreeChange).not.toHaveBeenCalled();
+
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     expect(savedConfig(onTreeChange).scripts?.pre).toBe("console.log('pending')");
   });
 
-  // config-grid - behavior: editing the post-response script persists it without
-  // clobbering the pre script.
-  it("should persist a post-response script edit on blur keeping pre", async () => {
+  // config-grid - behavior: editing the post-response script persists it on save
+  // without clobbering the pre script.
+  it("should persist a post-response script edit on save keeping pre", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn<OnTreeChange>().mockResolvedValue({ ok: true });
     renderPane(onTreeChange);
@@ -422,6 +493,7 @@ describe("editable Script panel", () => {
     await user.click(within(stages).getByRole("tab", { name: "Post" }));
 
     await setScript(/post-response/i, "after()");
+    await fireSave(user);
 
     await waitFor(() => expect(onTreeChange).toHaveBeenCalled());
     const scripts = savedConfig(onTreeChange).scripts;

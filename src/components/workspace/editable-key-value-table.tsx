@@ -18,13 +18,13 @@ export type TokenHighlightContext = {
 const dropBlankKeys = (rows: KeyValue[]) =>
   rows.filter((row) => row.key.trim() !== "");
 
-// Editable key/value grid (CSS grid: [checkbox] key value [delete]). Edits buffer
-// in a local draft and commit to the parent on blur via onChange(rows). A pending
-// (un-blurred) edit is also flushed on unmount, so switching tabs - which unmounts
-// the panel and can swallow the input's blur - never loses the last keystroke.
-// A trailing blank row is always shown; typing into it materializes the row + a
-// fresh blank appears (no Add-row button). Optional per-row enable toggle
-// (headers/params). A blank-key row is dropped on commit.
+// Editable key/value grid (CSS grid: [checkbox] key value [delete]). Each edit
+// commits to the parent draft immediately via onChange(rows) - NOT buffered until
+// blur - so Cmd+S saves the latest keystroke even while a cell still has focus
+// (the parent draft is in-memory; disk persist happens only on Cmd+S). A trailing
+// blank row is always shown; typing into it materializes the row + a fresh blank
+// appears (no Add-row button). Optional per-row enable toggle (headers/params). A
+// blank-key row is dropped on commit.
 export function EditableKeyValueTable({
   rows,
   onChange,
@@ -41,18 +41,12 @@ export function EditableKeyValueTable({
   highlight?: TokenHighlightContext;
 }) {
   const [draft, setDraft] = useState<KeyValue[]>(rows);
-  const [isDirty, setIsDirty] = useState(false);
 
-  // Refs mirror state for the blur/unmount flush: a cleanup closure can't read
-  // the latest state without re-subscribing the effect every render. Synced in an
-  // effect (never during render) per react-hooks/refs.
+  // `draftRef` mirrors `draft` so an edit handler reads the latest rows without a
+  // stale closure (synced in an effect, never during render, per react-hooks/refs).
   const draftRef = useRef(draft);
-  const isDirtyRef = useRef(isDirty);
-  const onChangeRef = useRef(onChange);
   useEffect(() => {
     draftRef.current = draft;
-    isDirtyRef.current = isDirty;
-    onChangeRef.current = onChange;
   });
 
   // Reseed when the upstream rows change identity (node switch / external save).
@@ -60,43 +54,29 @@ export function EditableKeyValueTable({
   if (seed !== rows) {
     setSeed(rows);
     setDraft(rows);
-    setIsDirty(false);
   }
 
-  // Flush any pending (un-blurred) edit when the panel unmounts (tab switch).
-  useEffect(
-    () => () => {
-      if (isDirtyRef.current) {
-        onChangeRef.current(dropBlankKeys(draftRef.current));
-      }
-    },
-    [],
-  );
-
-  // Commit immediately (toggle / delete - no typing, so no blur to wait for).
-  const commitRows = (next: KeyValue[]) => {
+  // Apply an edit to the local draft AND commit it to the parent draft in the same
+  // call. Committing on every change (not just blur) means Cmd+S saves the latest
+  // edit even while the cell still has focus - the parent draft is in-memory now
+  // (persist only on Cmd+S), so per-keystroke commit is cheap and removes the
+  // blur/unmount-flush gap that lost edits on save.
+  const apply = (next: KeyValue[]) => {
+    draftRef.current = next;
     setDraft(next);
-    setIsDirty(false);
     onChange(dropBlankKeys(next));
   };
 
-  // Buffer a keystroke. Editing the trailing blank row (index === draft.length)
-  // materializes it so a new blank row appears below. Commits on blur / unmount.
-  const editCell = (index: number, patch: Partial<KeyValue>) => {
-    setDraft((current) =>
-      index < current.length
-        ? current.map((row, i) => (i === index ? { ...row, ...patch } : row))
-        : [...current, { ...BLANK, ...patch }],
+  // Editing the trailing blank row (index === draft.length) materializes it so a
+  // new blank row appears below.
+  const editCell = (index: number, patch: Partial<KeyValue>) =>
+    apply(
+      index < draftRef.current.length
+        ? draftRef.current.map((row, i) =>
+            i === index ? { ...row, ...patch } : row,
+          )
+        : [...draftRef.current, { ...BLANK, ...patch }],
     );
-    setIsDirty(true);
-  };
-
-  const flush = () => {
-    if (isDirtyRef.current) {
-      onChange(dropBlankKeys(draftRef.current));
-      setIsDirty(false);
-    }
-  };
 
   const cols = withToggle ? "2.25rem 1fr 1fr 2.25rem" : "1fr 1fr 2.25rem";
   const display = [...draft, BLANK];
@@ -126,7 +106,7 @@ export function EditableKeyValueTable({
                       aria-label={`Enable ${row.key || "row"}`}
                       checked={!isDisabled}
                       onChange={(event) =>
-                        commitRows(
+                        apply(
                           draftRef.current.map((r, i) =>
                             i === index
                               ? { ...r, enabled: event.target.checked }
@@ -151,7 +131,6 @@ export function EditableKeyValueTable({
                 onChange={(event) =>
                   editCell(index, { key: event.target.value })
                 }
-                onBlur={flush}
                 className={input}
               />
             </div>
@@ -165,7 +144,6 @@ export function EditableKeyValueTable({
                 onChange={(event) =>
                   editCell(index, { value: event.target.value })
                 }
-                onBlur={flush}
                 className={cn(
                   input,
                   highlight && "text-transparent caret-foreground",
@@ -188,7 +166,7 @@ export function EditableKeyValueTable({
                   type="button"
                   aria-label={`Remove ${row.key || "row"}`}
                   onClick={() =>
-                    commitRows(draftRef.current.filter((_, i) => i !== index))
+                    apply(draftRef.current.filter((_, i) => i !== index))
                   }
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >

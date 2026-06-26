@@ -5,6 +5,7 @@ import {
   within,
   waitFor,
   fireEvent,
+  act,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
@@ -64,12 +65,17 @@ function liveDoc(): string {
   return view.state.doc.toString();
 }
 
-function setDoc(text: string) {
+// Dispatch inside act so the onChange -> setText -> re-register-descriptor update
+// flushes BEFORE the test fires save - else the save reads the stale seed
+// descriptor (the CM-dispatch/Mod+S timing flake class, docs/learnings.md #139).
+async function setDoc(text: string) {
   const view = EditorView.findFromDOM(
     document.querySelector<HTMLElement>(".cm-editor")!,
   )!;
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: text },
+  await act(async () => {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: text },
+    });
   });
 }
 
@@ -190,7 +196,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(
+    await setDoc(
       fullRequestDoc({
         method: "POST",
         body: { type: "json", payload: { a: 1 } },
@@ -224,7 +230,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(
+    await setDoc(
       fullRequestDoc({ body: { type: "json", payload: { from: "settings" } } }),
     );
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
@@ -306,7 +312,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(doc);
+    await setDoc(doc);
     await waitFor(() => {
       expect(screen.getByTestId("popup-can-save")).toHaveTextContent("false");
     });
@@ -347,7 +353,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(fullRequestDoc({ url: "https://edited.test" }));
+    await setDoc(fullRequestDoc({ url: "https://edited.test" }));
     await waitFor(() => {
       expect(screen.getByTestId("editor-dirty")).toHaveTextContent("true");
     });
@@ -367,7 +373,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(
+    await setDoc(
       fullRequestDoc({
         method: "POST",
         bodyMode: "form",
@@ -415,7 +421,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(fullRequestDoc({ config: { variables: { token: "abc" } } }));
+    await setDoc(fullRequestDoc({ config: { variables: { token: "abc" } } }));
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     expect(await screen.findByText(/saved/i)).toBeInTheDocument();
@@ -447,7 +453,7 @@ describe("RequestPane Settings sub-tab", () => {
     });
 
     const editedConfig = { variables: { token: "via-hotkey" } };
-    setDoc(fullRequestDoc({ config: editedConfig }));
+    await setDoc(fullRequestDoc({ config: editedConfig }));
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     await waitFor(() => {
@@ -468,7 +474,7 @@ describe("RequestPane Settings sub-tab", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(fullRequestDoc({ config: { variables: { token: "abc" } } }));
+    await setDoc(fullRequestDoc({ config: { variables: { token: "abc" } } }));
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     expect(await screen.findByText(/disk full/i)).toBeInTheDocument();

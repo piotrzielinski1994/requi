@@ -14,7 +14,7 @@ type ScriptEditorProps = {
   value: string;
   stage: ScriptStage;
   onChange: (value: string) => void;
-  onBlur: () => void;
+  onBlur?: () => void;
   ariaLabel: string;
 };
 
