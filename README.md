@@ -85,8 +85,9 @@ download links 404 immediately. Anyone who already downloaded keeps their local 
 > switching modes preserves data - form and multipart share their rows, the JSON text keeps its
 > own slot. The mode + rows persist to the request's `*.req.json` and the Settings tab JSON.
 >
-> Per-installation UI settings (panel split sizes, whether the console is hidden, and the
-> set of open request tabs + the active one) persist to a `settings.json` in the OS
+> Per-installation UI settings (panel split sizes, whether the console is hidden, whether the
+> window was fullscreen, and the set of open request tabs + the active one) persist to a
+> `settings.json` in the OS
 > app-config dir via the Tauri Store plugin, restored on launch (open tabs reopen on
 > restart; ids no longer in the workspace are dropped, freshly-created in-session ids are not
 > persisted until the workspace reloads from disk).

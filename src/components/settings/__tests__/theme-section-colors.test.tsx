@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 
@@ -73,12 +73,17 @@ function liveDoc(): string {
   return view.state.doc.toString();
 }
 
-function setDoc(text: string) {
+// Dispatch inside act so the onChange -> setText -> re-register-descriptor
+// update flushes BEFORE the test fires save - else the save reads the stale seed
+// descriptor (the CM-dispatch/Mod+S timing flake class, docs/learnings.md #139).
+async function setDoc(text: string) {
   const view = EditorView.findFromDOM(
     document.querySelector<HTMLElement>(".cm-editor")!,
   )!;
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: text },
+  await act(async () => {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: text },
+    });
   });
 }
 
@@ -170,7 +175,7 @@ describe("ThemeSection color editor", () => {
         tokens: { ...full.light.tokens, primary: "oklch(0.55 0.22 27)" },
       },
     };
-    setDoc(JSON.stringify(edited, null, 2));
+    await setDoc(JSON.stringify(edited, null, 2));
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     await waitFor(() => {
@@ -238,7 +243,7 @@ describe("ThemeSection color editor", () => {
         },
       },
     };
-    setDoc(JSON.stringify(resetToDefault, null, 2));
+    await setDoc(JSON.stringify(resetToDefault, null, 2));
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 
     await waitFor(() => {
@@ -257,7 +262,7 @@ describe("ThemeSection color editor", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc("{ not json");
+    await setDoc("{ not json");
 
     await waitFor(() => {
       expect(screen.getByTestId("popup-can-save")).toHaveTextContent("false");
@@ -273,7 +278,7 @@ describe("ThemeSection color editor", () => {
       expect(document.querySelector(".cm-editor")).not.toBeNull();
     });
 
-    setDoc(JSON.stringify({ light: { tokens: {} } }));
+    await setDoc(JSON.stringify({ light: { tokens: {} } }));
 
     await waitFor(() => {
       expect(screen.getByTestId("popup-can-save")).toHaveTextContent("false");
@@ -292,7 +297,7 @@ describe("ThemeSection color editor", () => {
       DEFAULT_SETTINGS.theme.colors,
       DEFAULT_THEME_COLORS,
     );
-    setDoc(JSON.stringify(full, null, 2));
+    await setDoc(JSON.stringify(full, null, 2));
 
     await waitFor(() => {
       expect(screen.getByTestId("popup-can-save")).toHaveTextContent("true");

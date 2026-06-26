@@ -4,10 +4,16 @@ import { SettingsProvider } from "@/lib/settings/settings-context";
 import { createTauriSettingsStore } from "@/lib/settings/tauri-store";
 import { createInMemorySettingsStore } from "@/lib/settings/in-memory-store";
 import { DEFAULT_SETTINGS } from "@/lib/settings/settings";
+import { isTauri } from "@tauri-apps/api/core";
 import { isDevBrowser } from "@/lib/runtime/environment";
 import { DEMO_WORKSPACE_PATH } from "@/lib/workspace/demo-seed";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/lib/theme/theme-context";
+import {
+  createNoopWindowController,
+  createWindowController,
+} from "@/lib/window/window-controller";
+import { WindowFullscreenSync } from "@/lib/window/window-fullscreen-sync";
 
 function createSettingsStore() {
   if (isDevBrowser()) {
@@ -19,11 +25,20 @@ function createSettingsStore() {
   return createTauriSettingsStore();
 }
 
+function createWindowControllerForEnv() {
+  // Only the real Tauri host has a window to drive; the dev-browser AND the
+  // jsdom test env (both non-Tauri) get the noop, so getCurrentWindow() - which
+  // throws without a Tauri host - is never called outside the native build.
+  return isTauri() ? createWindowController() : createNoopWindowController();
+}
+
 function RootLayout() {
   const [settingsStore] = useState(createSettingsStore);
+  const [windowController] = useState(createWindowControllerForEnv);
 
   return (
     <SettingsProvider store={settingsStore}>
+      <WindowFullscreenSync controller={windowController} />
       <ThemeProvider>
         <ToastProvider>
           <Outlet />

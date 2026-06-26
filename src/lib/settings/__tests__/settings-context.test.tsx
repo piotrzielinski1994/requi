@@ -88,6 +88,7 @@ describe("SettingsProvider", () => {
       layouts: { workspace: { sidebar: 22, content: 78 } },
       consoleHidden: true,
       sidebarHidden: false,
+      windowFullscreen: false,
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,

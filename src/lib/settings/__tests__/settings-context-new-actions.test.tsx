@@ -88,6 +88,75 @@ describe("SettingsProvider saveSidebarHidden", () => {
   });
 });
 
+function FullscreenProbe() {
+  const { settings, saveWindowFullscreen } = useSettings();
+
+  return (
+    <div>
+      <span data-testid="window-fullscreen">
+        {String(settings.windowFullscreen)}
+      </span>
+      <button
+        type="button"
+        onClick={() => saveWindowFullscreen(!settings.windowFullscreen)}
+      >
+        toggle window fullscreen
+      </button>
+    </div>
+  );
+}
+
+describe("SettingsProvider saveWindowFullscreen", () => {
+  // behavior: the context exposes the persisted fullscreen flag and flips it
+  it("should flip settings.windowFullscreen if saveWindowFullscreen is called", async () => {
+    const user = userEvent.setup();
+    const store = createInMemorySettingsStore();
+
+    render(
+      <SettingsProvider store={store}>
+        <FullscreenProbe />
+      </SettingsProvider>,
+    );
+
+    expect(await screen.findByTestId("window-fullscreen")).toHaveTextContent(
+      "false",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /toggle window fullscreen/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("window-fullscreen")).toHaveTextContent("true");
+    });
+  });
+
+  // side-effect-contract: the flip is persisted via store.save
+  it("should persist windowFullscreen via store.save if saveWindowFullscreen is called", async () => {
+    const user = userEvent.setup();
+    const inner = createInMemorySettingsStore();
+    const saveSpy = vi.fn(inner.save);
+    const store: SettingsStore = { load: inner.load, save: saveSpy };
+
+    render(
+      <SettingsProvider store={store}>
+        <FullscreenProbe />
+      </SettingsProvider>,
+    );
+
+    await screen.findByTestId("window-fullscreen");
+
+    await user.click(
+      screen.getByRole("button", { name: /toggle window fullscreen/i }),
+    );
+
+    await waitFor(() => {
+      expect(saveSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(saveSpy.mock.calls[0][0].windowFullscreen).toBe(true);
+  });
+});
+
 describe("SettingsProvider saveWorkspacePath", () => {
   // AC-006, TC-006 — behavior
   it("should set settings.workspacePath if saveWorkspacePath is called", async () => {
