@@ -76,6 +76,7 @@ export type Settings = {
   layouts: Partial<Record<PanelGroupKey, PanelLayout>>;
   consoleHidden: boolean;
   sidebarHidden: boolean;
+  windowFullscreen: boolean;
   shortcuts: ShortcutOverrides;
   openRequestIds: string[];
   activeRequestId: string | null;
@@ -100,6 +101,7 @@ export const DEFAULT_SETTINGS: Settings = {
   layouts: {},
   consoleHidden: false,
   sidebarHidden: false,
+  windowFullscreen: false,
   shortcuts: {},
   openRequestIds: [],
   activeRequestId: null,
@@ -260,6 +262,10 @@ export function mergeSettings(defaults: Settings, partial: unknown): Settings {
       typeof partial.sidebarHidden === "boolean"
         ? partial.sidebarHidden
         : defaults.sidebarHidden,
+    windowFullscreen:
+      typeof partial.windowFullscreen === "boolean"
+        ? partial.windowFullscreen
+        : defaults.windowFullscreen,
     shortcuts: mergeShortcuts(partial.shortcuts),
     openRequestIds,
     activeRequestId,

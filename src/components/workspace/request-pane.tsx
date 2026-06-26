@@ -22,12 +22,15 @@ function RequestTabs({ request }: { request: RequestNode }) {
     effectiveConfig,
     processEnv,
     activeEnvironment,
+    setRequestConfig,
   } = useWorkspace();
   const highlight = {
     effective: effectiveConfig,
     processEnv,
     environment: activeEnvironment,
   };
+  const onConfigChange = (config: RequestNode["config"]) =>
+    setRequestConfig(request.id, config);
 
   return (
     <Tabs
@@ -62,25 +65,25 @@ function RequestTabs({ request }: { request: RequestNode }) {
       </div>
       <TabsContent value="vars">
         <VarsPanel
-          id={request.id}
           config={request.config}
+          onChange={onConfigChange}
           highlight={highlight}
         />
       </TabsContent>
       <TabsContent value="auth">
-        <AuthPanel id={request.id} config={request.config} />
+        <AuthPanel config={request.config} onChange={onConfigChange} />
       </TabsContent>
       <TabsContent value="headers">
         <HeadersPanel
-          id={request.id}
           config={request.config}
+          onChange={onConfigChange}
           highlight={highlight}
         />
       </TabsContent>
       <TabsContent value="params">
         <ParamsPanel
-          id={request.id}
           config={request.config}
+          onChange={onConfigChange}
           highlight={highlight}
         />
       </TabsContent>
@@ -88,7 +91,7 @@ function RequestTabs({ request }: { request: RequestNode }) {
         <BodyPanel key={request.id} request={request} />
       </TabsContent>
       <TabsContent value="script">
-        <ScriptPanel id={request.id} config={request.config} />
+        <ScriptPanel config={request.config} onChange={onConfigChange} />
       </TabsContent>
       <TabsContent value="settings" className="min-h-0 flex-1">
         <RequestSettingsForm key={request.id} request={request} />

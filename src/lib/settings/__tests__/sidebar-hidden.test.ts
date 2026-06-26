@@ -46,6 +46,7 @@ describe("mergeSettings sidebarHidden", () => {
       layouts: {},
       consoleHidden: false,
       sidebarHidden: true,
+      windowFullscreen: false,
       shortcuts: {},
       openRequestIds: [],
       activeRequestId: null,

@@ -64,9 +64,26 @@ import {
 type RequestOverride = Partial<
   Pick<
     RequestNode,
-    "name" | "url" | "method" | "body" | "bodyMode" | "bodyForm"
+    "name" | "url" | "method" | "body" | "bodyMode" | "bodyForm" | "config"
   >
 >;
+
+// `config` is an object, so an override is only "dirty" when it differs from the
+// saved value by VALUE (a re-created-but-equal config must clear the dot). Every
+// other override field is a primitive, compared by `!==`.
+function isOverrideFieldDirty(
+  field: keyof RequestOverride,
+  overrideValue: unknown,
+  baseValue: unknown,
+): boolean {
+  if (overrideValue === undefined) {
+    return false;
+  }
+  if (field === "config") {
+    return JSON.stringify(overrideValue) !== JSON.stringify(baseValue);
+  }
+  return overrideValue !== baseValue;
+}
 
 export type EditTarget =
   | { kind: "config"; id: string }
@@ -133,7 +150,12 @@ type WorkspaceContextValue = {
   closeEditor: () => void;
   saveNodeConfig: (id: string, config: ConfigScope) => void;
   saveRequestNode: (id: string, patch: RequestPatch) => void;
-  saveActiveRequest: () => void;
+  saveActiveRequest: () => boolean;
+  // The Cmd+S entry point: saves the active editor or request, and ALWAYS shows a
+  // "Saved" toast - even with nothing to persist (clean state) - so Cmd+S always
+  // gives the same confirmation. Real saves toast once via persistTree; this only
+  // adds the toast when neither path persisted (so no double toast).
+  saveActive: () => void;
   dirtyRequestIds: Set<string>;
   saveEnv: (text: string) => void;
   setTokenValue: (target: TokenTarget, value: string) => void;
@@ -173,6 +195,7 @@ type WorkspaceContextValue = {
   setRequestForm: (id: string, rows: KeyValue[]) => void;
   setRequestUrl: (id: string, url: string) => void;
   setRequestMethod: (id: string, method: HttpMethod) => void;
+  setRequestConfig: (id: string, config: ConfigScope) => void;
   sendRequest: (id: string) => void;
   cancelRequest: (id: string) => void;
   setRequestTab: (tab: RequestTab) => void;
@@ -333,8 +356,7 @@ export function WorkspaceProvider({
         return;
       }
       const isDirty = (Object.keys(override) as (keyof RequestOverride)[]).some(
-        (field) =>
-          override[field] !== undefined && override[field] !== base[field],
+        (field) => isOverrideFieldDirty(field, override[field], base[field]),
       );
       if (isDirty) {
         dirty.add(id);
@@ -526,6 +548,8 @@ export function WorkspaceProvider({
     };
     const setRequestMethod = (id: string, method: HttpMethod) =>
       mergeOverride(id, { method });
+    const setRequestConfig = (id: string, config: ConfigScope) =>
+      mergeOverride(id, { config });
 
     const sendRequest = async (id: string) => {
       const node = requestsById.get(id);
@@ -828,16 +852,20 @@ export function WorkspaceProvider({
       showToastRef.current("Imported Bruno collection");
     };
 
+    // Optimistic save: the in-memory tree updates synchronously and we confirm
+    // ("Saved") immediately, without awaiting the disk write - so Cmd+S never
+    // mules behind the round-trip. The write still runs in the background; only a
+    // REJECTED write surfaces (a "Save failed" toast + console line) so the user
+    // is never silently left with an unpersisted change.
     const persistTree = (next: TreeNode[], failLabel: string) => {
       setTree(next);
       const persist = onTreeChangeRef.current;
+      showToastRef.current("Saved");
       if (!persist) {
-        showToastRef.current("Saved");
         return;
       }
       persist(next).then((result) => {
         if (result.ok) {
-          showToastRef.current("Saved");
           return;
         }
         showToastRef.current(`Save failed: ${result.error}`);
@@ -851,18 +879,18 @@ export function WorkspaceProvider({
     const saveNodeConfig = (id: string, config: ConfigScope) =>
       persistTree(updateNodeConfig(tree, id, config), "config");
 
-    const saveActiveRequest = () => {
+    const saveActiveRequest = (): boolean => {
       if (activeRequestId === null) {
-        return;
+        return false;
       }
       if (!dirtyRequestIds.has(activeRequestId)) {
-        return;
+        return false;
       }
       const patch = requestOverrides.get(activeRequestId) as
         | RequestPatch
         | undefined;
       if (!patch) {
-        return;
+        return false;
       }
       const id = activeRequestId;
       // Saving establishes the name - the URL no longer drives it.
@@ -876,6 +904,7 @@ export function WorkspaceProvider({
         return nextOverrides;
       });
       persistTree(updateRequest(tree, id, patch), "edits");
+      return true;
     };
 
     const saveRequestNode = (id: string, patch: RequestPatch) => {
@@ -1233,6 +1262,25 @@ export function WorkspaceProvider({
         activeEditor.save();
         return true;
       },
+      saveActive: () => {
+        // A DIRTY editor persists + toasts via its own save(); a dirty request
+        // persists + toasts via persistTree. Only when NEITHER had changes (clean
+        // state) do we toast here - so Cmd+S always confirms without double-toasting
+        // AND a clean save never pays the tree-write round-trip (the editor's save()
+        // would persist unconditionally, which lagged the toast on the Settings tab).
+        if (activeEditor) {
+          if (activeEditor.isDirty) {
+            activeEditor.save();
+            return;
+          }
+          showToastRef.current("Saved");
+          return;
+        }
+        if (saveActiveRequest()) {
+          return;
+        }
+        showToastRef.current("Saved");
+      },
       editorDirty,
       pendingClose,
       popupCanSave,
@@ -1296,6 +1344,7 @@ export function WorkspaceProvider({
       setRequestForm,
       setRequestUrl,
       setRequestMethod,
+      setRequestConfig,
       sendRequest,
       cancelRequest,
       setRequestTab: setActiveRequestTab,

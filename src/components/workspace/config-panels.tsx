@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -16,7 +16,6 @@ import {
   EditableKeyValueTable,
   type TokenHighlightContext,
 } from "@/components/workspace/editable-key-value-table";
-import { useWorkspace } from "@/components/workspace/workspace-context";
 import { ScriptEditor } from "@/components/workspace/script-editor";
 import type { ScriptStage } from "@/lib/scripts/model";
 import type { Auth, ConfigScope } from "@/lib/workspace/model";
@@ -50,19 +49,8 @@ function AuthRow({
   mono?: boolean;
   onCommit: (value: string) => void;
 }) {
-  const [draft, setDraft] = useState(value);
-  const [seed, setSeed] = useState(value);
   const [isVisible, setIsVisible] = useState(false);
-  if (seed !== value) {
-    setSeed(value);
-    setDraft(value);
-  }
   const Icon = isVisible ? EyeOff : Eye;
-  const commit = () => {
-    if (draft !== value) {
-      onCommit(draft);
-    }
-  };
   return (
     <div className="contents">
       <div className={cn(AUTH_CELL, "flex items-center px-2")}>
@@ -74,11 +62,10 @@ function AuthRow({
         <input
           id={id}
           type={secret && !isVisible ? "password" : "text"}
-          value={draft}
+          value={value}
           autoComplete="off"
           spellCheck={false}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
+          onChange={(event) => onCommit(event.target.value)}
           className={cn(AUTH_INPUT, secret && "pr-9", mono && "font-mono")}
         />
         {secret && (
@@ -165,12 +152,16 @@ export function authForType(type: Auth["type"]): Auth {
   return { type };
 }
 
-export function AuthPanel({ id, config }: { id: string; config: ConfigScope }) {
-  const { saveNodeConfig } = useWorkspace();
+export function AuthPanel({
+  config,
+  onChange,
+}: {
+  config: ConfigScope;
+  onChange: (config: ConfigScope) => void;
+}) {
   const auth = config.auth ?? { type: "inherit" };
 
-  const change = (nextAuth: Auth) =>
-    saveNodeConfig(id, { ...config, auth: nextAuth });
+  const change = (nextAuth: Auth) => onChange({ ...config, auth: nextAuth });
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -199,15 +190,14 @@ export function AuthPanel({ id, config }: { id: string; config: ConfigScope }) {
 }
 
 export function VarsPanel({
-  id,
   config,
+  onChange,
   highlight,
 }: {
-  id: string;
   config: ConfigScope;
+  onChange: (config: ConfigScope) => void;
   highlight?: TokenHighlightContext;
 }) {
-  const { saveNodeConfig } = useWorkspace();
   const rows = Object.entries(config.variables ?? {}).map(([key, value]) => ({
     key,
     value,
@@ -218,7 +208,7 @@ export function VarsPanel({
       keyPlaceholder="name"
       highlight={highlight}
       onChange={(next) =>
-        saveNodeConfig(id, {
+        onChange({
           ...config,
           variables: Object.fromEntries(next.map((r) => [r.key, r.value])),
         })
@@ -228,55 +218,52 @@ export function VarsPanel({
 }
 
 export function HeadersPanel({
-  id,
   config,
+  onChange,
   highlight,
 }: {
-  id: string;
   config: ConfigScope;
+  onChange: (config: ConfigScope) => void;
   highlight?: TokenHighlightContext;
 }) {
-  const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
       rows={config.headers ?? []}
       withToggle
       highlight={highlight}
-      onChange={(headers) => saveNodeConfig(id, { ...config, headers })}
+      onChange={(headers) => onChange({ ...config, headers })}
     />
   );
 }
 
 export function ParamsPanel({
-  id,
   config,
+  onChange,
   highlight,
 }: {
-  id: string;
   config: ConfigScope;
+  onChange: (config: ConfigScope) => void;
   highlight?: TokenHighlightContext;
 }) {
-  const { saveNodeConfig } = useWorkspace();
   return (
     <EditableKeyValueTable
       rows={config.params ?? []}
       withToggle
       highlight={highlight}
-      onChange={(params) => saveNodeConfig(id, { ...config, params })}
+      onChange={(params) => onChange({ ...config, params })}
     />
   );
 }
 
 export function ScriptPanel({
-  id,
   config,
+  onChange,
 }: {
-  id: string;
   config: ConfigScope;
+  onChange: (config: ConfigScope) => void;
 }) {
-  const { saveNodeConfig } = useWorkspace();
   const commit = (patch: { pre?: string; post?: string }) =>
-    saveNodeConfig(id, {
+    onChange({
       ...config,
       scripts: { ...config.scripts, ...patch },
     });
@@ -323,39 +310,17 @@ function ScriptField({
   value: string;
   onCommit: (value: string) => void;
 }) {
-  const [draft, setDraft] = useState(value);
-  const [seed, setSeed] = useState(value);
-  if (seed !== value) {
-    setSeed(value);
-    setDraft(value);
-  }
-  // Refs mirror state so the empty-dep unmount cleanup reads the latest values
-  // (a closure over `draft`/`value` would capture the mount-time ones). Synced in
-  // a separate effect - never assigned during render (lint react-hooks/refs).
-  const draftRef = useRef(draft);
-  const valueRef = useRef(value);
-  const onCommitRef = useRef(onCommit);
-  useEffect(() => {
-    draftRef.current = draft;
-    valueRef.current = value;
-    onCommitRef.current = onCommit;
-  });
-  const commitIfDirty = () => {
-    if (draftRef.current !== valueRef.current) {
-      onCommitRef.current(draftRef.current);
-    }
-  };
-  // Commit-on-blur loses the last edit on a TAB SWITCH (radix unmounts the panel
-  // before CM's blur fires), so flush any pending edit on unmount too.
-  useEffect(() => () => commitIfDirty(), []);
+  // Controlled: commit each edit straight into the parent draft so Cmd+S saves
+  // the latest text even while the editor still has focus (no blur buffering).
+  // The draft is in-memory now (persist only on Cmd+S), so per-keystroke commit
+  // is cheap and removes the blur/unmount-flush gap that lost edits on save.
   return (
     <div className="h-full p-2">
       <ScriptEditor
         ariaLabel={label}
         stage={stage}
-        value={draft}
-        onChange={setDraft}
-        onBlur={commitIfDirty}
+        value={value}
+        onChange={onCommit}
       />
     </div>
   );

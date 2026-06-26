@@ -23,6 +23,7 @@ type SettingsContextValue = {
   saveLayout: (group: PanelGroupKey, layout: PanelLayout) => void;
   saveConsoleHidden: (hidden: boolean) => void;
   saveSidebarHidden: (hidden: boolean) => void;
+  saveWindowFullscreen: (fullscreen: boolean) => void;
   saveWorkspacePath: (path: string) => void;
   saveShortcut: (id: ShortcutActionId, hotkey: string) => void;
   resetShortcut: (id: ShortcutActionId) => void;
@@ -82,6 +83,12 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
 
   const saveSidebarHidden = useCallback(
     (hidden: boolean) => update((base) => ({ ...base, sidebarHidden: hidden })),
+    [update],
+  );
+
+  const saveWindowFullscreen = useCallback(
+    (fullscreen: boolean) =>
+      update((base) => ({ ...base, windowFullscreen: fullscreen })),
     [update],
   );
 
@@ -146,6 +153,7 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
             saveLayout,
             saveConsoleHidden,
             saveSidebarHidden,
+            saveWindowFullscreen,
             saveWorkspacePath,
             saveShortcut,
             resetShortcut,
@@ -159,6 +167,7 @@ export function SettingsProvider({ store, children }: SettingsProviderProps) {
       saveLayout,
       saveConsoleHidden,
       saveSidebarHidden,
+      saveWindowFullscreen,
       saveWorkspacePath,
       saveShortcut,
       resetShortcut,

@@ -53,7 +53,7 @@ describe("section bar horizontal overflow (AC-001/002)", () => {
   it("should let the script stage bar scroll horizontally if it overflows", () => {
     render(
       <WorkspaceProvider tree={fixtureTree} initialActiveRequestId="req-token">
-        <ScriptPanel id={tokenRequest.id} config={tokenRequest.config} />
+        <ScriptPanel config={tokenRequest.config} onChange={() => {}} />
       </WorkspaceProvider>,
     );
 
@@ -77,7 +77,7 @@ describe("section bar horizontal overflow (AC-001/002)", () => {
   it("should let the auth type selector bar scroll horizontally if it overflows", () => {
     render(
       <WorkspaceProvider tree={fixtureTree} initialActiveRequestId="req-token">
-        <AuthPanel id={tokenRequest.id} config={tokenRequest.config} />
+        <AuthPanel config={tokenRequest.config} onChange={() => {}} />
       </WorkspaceProvider>,
     );
 

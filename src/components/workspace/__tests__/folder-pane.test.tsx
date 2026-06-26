@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 
@@ -194,12 +194,17 @@ describe("FolderPane", () => {
     const view = EditorView.findFromDOM(
       document.querySelector<HTMLElement>(".cm-editor")!,
     )!;
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: JSON.stringify({ variables: { x: "1" } }),
-      },
+    // Dispatch inside act so the onChange -> setText -> re-register-descriptor
+    // update flushes BEFORE firing save - else the save reads the stale seed
+    // (the CM-dispatch/Mod+S timing flake class, docs/learnings.md #139).
+    await act(async () => {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: view.state.doc.length,
+          insert: JSON.stringify({ variables: { x: "1" } }),
+        },
+      });
     });
     await user.click(screen.getByRole("button", { name: /fire shortcut/i }));
 

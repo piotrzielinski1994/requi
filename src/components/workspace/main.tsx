@@ -61,8 +61,7 @@ export function Main({
     beginRename,
     requestDeleteNode,
     sendRequest,
-    saveActiveEditor,
-    saveActiveRequest,
+    saveActive,
     copyAsCurl,
     openCurlImport,
     importBruno,
@@ -184,11 +183,7 @@ export function Main({
         sendRequest(activeRequestId);
       }
     },
-    "save-active-editor": () => {
-      if (!saveActiveEditor()) {
-        saveActiveRequest();
-      }
-    },
+    "save-active-editor": saveActive,
     "copy-as-curl": copyAsCurl,
     "import-curl": openCurlImport,
     "import-bruno": importBrunoCollection,
