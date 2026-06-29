@@ -68,17 +68,21 @@ export function buildScriptApi(ctx: ScriptContext): ScriptApi {
 
   // Vars a script reads come back interpolated (Bruno returns resolved values),
   // so a `{{process.env.X}}`/`{{other}}` value is substituted before string ops.
-  const allVars = Object.fromEntries(
-    Object.entries(ctx.effective.variables).map(([key, resolved]) => [
-      key,
-      resolved.value,
-    ]),
-  );
-  ctx.runtimeVars.forEach((value, key) => {
-    allVars[key] = value;
-  });
+  // Rebuilt per call so a var written by setVar earlier in this run is visible.
+  const liveVars = () => {
+    const vars = Object.fromEntries(
+      Object.entries(ctx.effective.variables).map(([key, resolved]) => [
+        key,
+        resolved.value,
+      ]),
+    );
+    ctx.runtimeVars.forEach((value, key) => {
+      vars[key] = value;
+    });
+    return vars;
+  };
   const resolveVar = (raw: string | undefined): string | undefined =>
-    raw === undefined ? undefined : interpolate(raw, allVars, ctx.processEnv);
+    raw === undefined ? undefined : interpolate(raw, liveVars(), ctx.processEnv);
 
   const api: ScriptApi = {
     requi: {
@@ -103,7 +107,7 @@ export function buildScriptApi(ctx: ScriptContext): ScriptApi {
   const draft = ctx.reqDraft;
   if (draft) {
     api.req = {
-      getUrl: () => draft.url,
+      getUrl: () => resolveVar(draft.url) ?? draft.url,
       setUrl: (value) => {
         draft.url = value;
       },

@@ -267,6 +267,40 @@ describe("send loop - post reads res + setVar (TC-006 / AC-004 / AC-006)", () =>
     expect(landed).toBe(true);
   });
 
+  // behavior: a post script can read `req` (the sent request): getUrl returns the
+  // interpolated url, getMethod the method - reflecting any pre mutation.
+  it("should expose req to a post script with the interpolated sent url", async () => {
+    const user = userEvent.setup();
+    const client = createFakeHttpClient({
+      ok: true,
+      response: {
+        status: 200,
+        timeMs: 1,
+        sizeBytes: 2,
+        body: "{}",
+        headers: [],
+      },
+    });
+    const seen: { url?: string; method?: string } = {};
+    const runner = createFakeScriptRunner((api: ScriptApi) => {
+      seen.url = api.req?.getUrl();
+      seen.method = api.req?.getMethod();
+    });
+    renderProbe({
+      tree: makeTree({ post: "/* post */" }),
+      client,
+      scriptRunner: runner,
+    });
+
+    await user.click(screen.getByRole("button", { name: /send main/i }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("state").textContent).toBe("success:200"),
+    );
+    expect(seen.url).toBe("https://api.example.com/thing");
+    expect(seen.method).toBe("GET");
+  });
+
   // behavior: a throwing post script keeps the success state and logs a console
   // error line (does not downgrade to error).
   it("should keep the response success and log a console line if post throws", async () => {

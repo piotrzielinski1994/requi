@@ -139,6 +139,31 @@ describe("buildScriptApi - req", () => {
     expect(api.req?.getHeaders()).toEqual({ "x-a": "2" });
   });
 
+  it("should return the url with {{var}} tokens interpolated", () => {
+    const eff = effective({
+      variables: {
+        SOME_ENV: { value: "env211", from: PROV },
+        var1: { value: "var21", from: PROV },
+      },
+    });
+    const draft = draftOf();
+    draft.url = "https://x/get?env={{SOME_ENV}}&v={{var1}}";
+    const api = buildScriptApi(preCtx(eff, draft));
+
+    expect(api.req?.getUrl()).toBe("https://x/get?env=env211&v=var21");
+  });
+
+  it("should interpolate the url using a runtime var set earlier in the run", () => {
+    const draft = draftOf();
+    draft.url = "https://x/{{tok}}";
+    const ctx = preCtx(effective(), draft);
+    const api = buildScriptApi(ctx);
+
+    api.requi.setVar("tok", "abc");
+
+    expect(api.req?.getUrl()).toBe("https://x/abc");
+  });
+
   it("should expose url/method/body mutations on the draft", () => {
     const draft = draftOf();
     const api = buildScriptApi(preCtx(effective(), draft));

@@ -34,7 +34,8 @@ therefore covers both `npm start` (native) and `npm run dev` (browser).
   (`config.environments.<env>`) - `setVar` writes plain `config.variables` only; network/`fetch`,
   timers (`setTimeout`), filesystem, or any host API beyond the documented context; a per-script
   configurable timeout (fixed default this round); importing npm modules inside a script;
-  pre-script reading `res` or post-script mutating `req`.
+  pre-script reading `res`. (A post-script CAN read `req` - the sent request - but its setters are
+  no-ops since the request already went out.)
 
 ### Decisions captured (user)
 
@@ -65,8 +66,9 @@ therefore covers both `npm start` (native) and `npm run dev` (browser).
 
 ## 2. Script context API
 
-The runtime exposes these globals. `req` exists only in **pre**, `res` only in **post**;
-`requi` + `console` exist in both.
+The runtime exposes these globals. `req` exists in **both** stages (in **post** it reflects the
+request as actually sent, including any pre mutation), `res` only in **post**; `requi` + `console`
+exist in both. A post-script's `req` setters have no effect on the already-sent request.
 
 ```
 requi.getVar(name)            -> string | undefined   resolved variable (incl. a value set
@@ -76,8 +78,9 @@ requi.setVar(name, value)                              persist to nearest-defini
 requi.getProcessEnv(name)     -> string | undefined   reads .env (`{{process.env.X}}` namespace)
 requi.getEnvName()            -> string | null        active environment name
 
-req.getUrl()  / req.setUrl(v)                          raw url (may contain {{var}}); set value
-                                                       is re-interpolated downstream
+req.getUrl()  / req.setUrl(v)                          getUrl returns the {{var}}-interpolated url
+                                                       (incl. vars set earlier this run); setUrl
+                                                       takes a raw value, re-interpolated downstream
 req.getMethod() / req.setMethod(v)                     HttpMethod; setMethod validates the enum
 req.getHeader(name) / req.setHeader(name, value)       raw header value (case-insensitive name)
 req.getHeaders() -> Record<string,string>
@@ -125,7 +128,8 @@ console.log / info / warn / error(...args)              appended to the Console 
 4. send (existing client.send + generation/cancel machinery)
 5. on success:
      POST (if effective.scripts.post non-empty):
-       - run post script against { requi, res, console } (res read-only over the response)
+       - run post script against { requi, req, res, console } (res read-only over the response;
+         req reflects the sent request - getters useful, setters no-op)
        - if the script ERRORS -> push a console line, KEEP the response state = success
        - apply varWrites to the tree + persist
    set responseState = { success, response }   (post runs before the state commit so a
