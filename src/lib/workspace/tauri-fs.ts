@@ -5,6 +5,7 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
+import { toResult } from "@/lib/result";
 import type { FileMap } from "@/lib/workspace/disk-format";
 import type { ReadResult, WorkspaceFs, WriteResult } from "@/lib/workspace/fs";
 import {
@@ -48,47 +49,47 @@ export function createTauriWorkspaceFs(): WorkspaceFs {
   return {
     readWorkspace: async (rootPath): Promise<ReadResult> => {
       const files: FileMap = {};
-      try {
-        await collect(rootPath, "", files);
-        return { ok: true, files };
-      } catch (error) {
-        return { ok: false, error: `Failed to read workspace: ${error}` };
+      const read = await toResult(collect(rootPath, "", files));
+      if (!read.ok) {
+        return { ok: false, error: `Failed to read workspace: ${read.error}` };
       }
+      return { ok: true, files };
     },
     writeWorkspace: async (rootPath, files): Promise<WriteResult> => {
       const current: FileMap = {};
-      try {
-        await collect(rootPath, "", current);
-      } catch {
-        // Fresh/unreadable target: treat as empty, write everything.
-      }
+      // Fresh/unreadable target: treat as empty, write everything.
+      await toResult(collect(rootPath, "", current));
       const plan = planReconcile(current, files);
-      try {
-        for (const [relPath, content] of Object.entries(plan.write)) {
-          const dir = parentDir(relPath);
-          if (dir !== null) {
-            await mkdir(`${rootPath}/${dir}`, { recursive: true });
+      const written = await toResult(
+        (async (): Promise<void> => {
+          for (const [relPath, content] of Object.entries(plan.write)) {
+            const dir = parentDir(relPath);
+            if (dir !== null) {
+              await mkdir(`${rootPath}/${dir}`, { recursive: true });
+            }
+            await writeTextFile(`${rootPath}/${relPath}`, content);
           }
-          await writeTextFile(`${rootPath}/${relPath}`, content);
-        }
-        for (const relPath of plan.remove) {
-          await remove(`${rootPath}/${relPath}`);
-        }
-        for (const dir of emptyDirsAfterRemoval(files, plan.remove)) {
-          await remove(`${rootPath}/${dir}`).catch(() => undefined);
-        }
-        return { ok: true };
-      } catch (error) {
-        return { ok: false, error: `Failed to write workspace: ${error}` };
+          for (const relPath of plan.remove) {
+            await remove(`${rootPath}/${relPath}`);
+          }
+          for (const dir of emptyDirsAfterRemoval(files, plan.remove)) {
+            await remove(`${rootPath}/${dir}`).catch(() => undefined);
+          }
+        })(),
+      );
+      if (!written.ok) {
+        return { ok: false, error: `Failed to write workspace: ${written.error}` };
       }
+      return { ok: true };
     },
     writeEnv: async (rootPath, content): Promise<WriteResult> => {
-      try {
-        await writeTextFile(`${rootPath}/.env`, content);
-        return { ok: true };
-      } catch (error) {
-        return { ok: false, error: `Failed to write .env: ${error}` };
+      const written = await toResult(
+        writeTextFile(`${rootPath}/.env`, content),
+      );
+      if (!written.ok) {
+        return { ok: false, error: `Failed to write .env: ${written.error}` };
       }
+      return { ok: true };
     },
   };
 }
