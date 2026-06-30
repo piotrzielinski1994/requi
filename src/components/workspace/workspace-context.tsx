@@ -29,6 +29,8 @@ import { locateNode } from "@/lib/workspace/tree-locate";
 import { untitledName } from "@/lib/workspace/request-name";
 import type { WriteResult } from "@/lib/workspace/fs";
 import { buildHttpRequest } from "@/lib/http/build-request";
+import { extractPathParams } from "@/lib/http/path-params";
+import { syncParamsFromUrl, syncUrlFromParams } from "@/lib/http/query-sync";
 import { createFakeHttpClient } from "@/lib/http/fake-client";
 import type { HttpClient, ResponseState } from "@/lib/http/model";
 import type { ScriptRunner } from "@/lib/scripts/model";
@@ -72,7 +74,14 @@ import {
 type RequestOverride = Partial<
   Pick<
     RequestNode,
-    "name" | "url" | "method" | "body" | "bodyMode" | "bodyForm" | "config"
+    | "name"
+    | "url"
+    | "method"
+    | "body"
+    | "bodyMode"
+    | "bodyForm"
+    | "pathParams"
+    | "config"
   >
 >;
 
@@ -87,7 +96,7 @@ function isOverrideFieldDirty(
   if (overrideValue === undefined) {
     return false;
   }
-  if (field === "config") {
+  if (field === "config" || field === "pathParams") {
     return JSON.stringify(overrideValue) !== JSON.stringify(baseValue);
   }
   return overrideValue !== baseValue;
@@ -233,6 +242,8 @@ type WorkspaceContextValue = {
   setRequestForm: (id: string, rows: KeyValue[]) => void;
   setRequestUrl: (id: string, url: string) => void;
   setRequestMethod: (id: string, method: HttpMethod) => void;
+  setRequestPathParams: (id: string, pathParams: Record<string, string>) => void;
+  setRequestQueryParams: (id: string, params: KeyValue[]) => void;
   setRequestConfig: (id: string, config: ConfigScope) => void;
   sendRequest: (id: string) => void;
   cancelRequest: (id: string) => void;
@@ -610,19 +621,85 @@ export function WorkspaceProvider({
       mergeOverride(id, { bodyMode });
     const setRequestForm = (id: string, bodyForm: KeyValue[]) =>
       mergeOverride(id, { bodyForm });
+    // Drop a stored path-param value only when its `:name` LEFT the URL (was in the
+    // old URL, gone from the new one), so removing `:id` from the address bar prunes
+    // it - but a grid-only param (defined in the Path tab, never in the URL) is kept.
+    // Returns the patch only when it changes something (a no-op edit stays non-dirty).
+    const prunePathParamsPatch = (
+      id: string,
+      nextUrl: string,
+    ): RequestOverride => {
+      const node = requestsById.get(id);
+      const current = node?.pathParams;
+      if (!current || Object.keys(current).length === 0) {
+        return {};
+      }
+      const removed = new Set(
+        extractPathParams(node.url).filter(
+          (name) => !extractPathParams(nextUrl).includes(name),
+        ),
+      );
+      if (removed.size === 0) {
+        return {};
+      }
+      const pruned = Object.fromEntries(
+        Object.entries(current).filter(([name]) => !removed.has(name)),
+      );
+      return { pathParams: pruned };
+    };
+    // Mirror a URL `?query` edit into the request's own `config.params` (the Query
+    // grid): a typed `?key=value` adds/re-enables a row, a key removed from the URL
+    // disables its row (value kept). Returns the patch only when the params actually
+    // change, so a path-only URL edit stays out of the dirty/config override.
+    const syncQueryPatch = (id: string, nextUrl: string): RequestOverride => {
+      const node = requestsById.get(id);
+      if (!node) {
+        return {};
+      }
+      const current = node.config.params ?? [];
+      const next = syncParamsFromUrl(node.url, nextUrl, current);
+      if (JSON.stringify(next) === JSON.stringify(current)) {
+        return {};
+      }
+      return { config: { ...node.config, params: next } };
+    };
     const setRequestUrl = (id: string, url: string) => {
+      const prune = prunePathParamsPatch(id, url);
+      const query = syncQueryPatch(id, url);
       // A freshly-created request's name tracks the URL verbatim until the user
       // names it; an empty URL falls back to the request's unique untitled name
       // so clearing the field doesn't blank the label.
       const fallback = autoNameIds.current.get(id);
       if (fallback !== undefined) {
-        mergeOverride(id, { url, name: url.trim() || fallback });
+        mergeOverride(id, {
+          url,
+          name: url.trim() || fallback,
+          ...prune,
+          ...query,
+        });
         return;
       }
-      mergeOverride(id, { url });
+      mergeOverride(id, { url, ...prune, ...query });
     };
     const setRequestMethod = (id: string, method: HttpMethod) =>
       mergeOverride(id, { method });
+    const setRequestPathParams = (
+      id: string,
+      pathParams: Record<string, string>,
+    ) => mergeOverride(id, { pathParams });
+    // The Query grid edits `config.params` AND mirrors the enabled rows back into the
+    // URL `?query` (path + `:pathParams` preserved), so toggling/editing a row updates
+    // the address bar live (the reverse of syncQueryPatch).
+    const setRequestQueryParams = (id: string, params: KeyValue[]) => {
+      const node = requestsById.get(id);
+      if (!node) {
+        return;
+      }
+      mergeOverride(id, {
+        config: { ...node.config, params },
+        url: syncUrlFromParams(node.url, params),
+      });
+    };
     const setRequestConfig = (id: string, config: ConfigScope) =>
       mergeOverride(id, { config });
 
@@ -1531,6 +1608,8 @@ export function WorkspaceProvider({
       setRequestForm,
       setRequestUrl,
       setRequestMethod,
+      setRequestPathParams,
+      setRequestQueryParams,
       setRequestConfig,
       sendRequest,
       cancelRequest,

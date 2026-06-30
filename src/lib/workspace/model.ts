@@ -41,6 +41,9 @@ export type RequestNode = {
   body: string;
   bodyMode?: BodyMode;
   bodyForm?: KeyValue[];
+  // Request-only path params: `:name` (without colon) -> value (may hold {{tokens}}).
+  // Keys are URL-driven (every `:name` in the URL); not inherited from folders.
+  pathParams?: Record<string, string>;
   config: ConfigScope;
   response?: RequestResponse;
 };

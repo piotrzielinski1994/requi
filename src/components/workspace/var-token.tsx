@@ -53,14 +53,6 @@ function TokenValueEditor({ preview }: { preview: TokenPreview }) {
       />
       <button
         type="button"
-        aria-label="Go to source"
-        onClick={() => revealTokenSource(preview.target)}
-        className="flex shrink-0 items-center border-l px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-      >
-        <PencilLine className="size-3.5" />
-      </button>
-      <button
-        type="button"
         aria-label="Copy value"
         onClick={() => {
           navigator.clipboard?.writeText(preview.value);
@@ -69,6 +61,14 @@ function TokenValueEditor({ preview }: { preview: TokenPreview }) {
         className="flex shrink-0 items-center border-l px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <Copy className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        aria-label="Go to source"
+        onClick={() => revealTokenSource(preview.target)}
+        className="flex shrink-0 items-center border-l px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      >
+        <PencilLine className="size-3.5" />
       </button>
     </div>
   );

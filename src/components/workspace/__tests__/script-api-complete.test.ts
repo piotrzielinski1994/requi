@@ -23,10 +23,19 @@ describe("apiMembers", () => {
     ]);
   });
 
-  it("should list req methods only in the pre stage", () => {
+  it("should list the full req read+write set in the pre stage", () => {
     expect(apiMembers("req", "pre")).toContain("setUrl");
     expect(apiMembers("req", "pre")).toContain("setHeader");
-    expect(apiMembers("req", "post")).toEqual([]);
+    expect(apiMembers("req", "pre")).toContain("getUrl");
+  });
+
+  // `req` is also available in post (read-only): getters yes, setters no (a post
+  // setter would mutate a draft discarded after send).
+  it("should list only the read-only req getters in the post stage", () => {
+    expect(apiMembers("req", "post")).toContain("getUrl");
+    expect(apiMembers("req", "post")).toContain("getHeader");
+    expect(apiMembers("req", "post")).not.toContain("setUrl");
+    expect(apiMembers("req", "post")).not.toContain("setHeader");
   });
 
   it("should list res methods only in the post stage", () => {

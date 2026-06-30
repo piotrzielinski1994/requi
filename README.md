@@ -175,10 +175,16 @@ download links 404 immediately. Anyone who already downloaded keeps their local 
 > environments, headers, params, auth, scripts, timeout); a request resolves it by inheriting
 > from its folder chain (child overrides parent), and that resolved config is what Send uses.
 > The request/folder pane's **Vars / Auth / Headers / Params / Script** tabs are structured
-> editors: Vars/Headers/Params are key→value grids (edit a cell, or type into the always-present
-> trailing blank row to add; trash icon removes; Headers/Params rows have a full-cell enable
-> checkbox - a disabled row is kept on disk but excluded from the sent request),
-> Auth is a type select + fields, Script is pre/post text areas. These commit **immediately on
+> editors: Vars/Headers/Query are key→value grids (edit a cell, or type into the always-present
+> trailing blank row to add; trash icon removes; Headers/Query rows have a full-cell enable
+> checkbox - a disabled row is kept on disk but excluded from the sent request).
+> The **Params** tab nests a **Path / Query** sub-bar (Query default): **Query** is the inherited
+> `config.params` grid above; **Path** is a request-only key→value grid (`request.pathParams`,
+> not inherited). A path param can be defined in the grid OR by writing `:name` in the URL
+> (e.g. `/users/:id`) - the two stay in sync (typing `:name` in the URL adds a row, removing it
+> prunes that row; grid-only rows are untouched). At send time each `:name` is replaced by its
+> value (editable, `{{var}}`-interpolated); an empty value leaves the `:name` literal. Auth is a
+> type select + fields, Script is pre/post text areas. These commit **immediately on
 > blur** (or selection) via the same write path. The **Script** tab's `pre`/`post` JavaScript runs
 > on every send (in a sandboxed QuickJS-WASM realm - no `window`/`fetch`/`process`): a **pre**
 > script runs before the request is built and can mutate it (`req.setUrl/setMethod/setHeader/

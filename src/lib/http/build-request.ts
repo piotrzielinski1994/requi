@@ -3,6 +3,7 @@ import type { Auth, KeyValue, RequestNode } from "@/lib/workspace/model";
 import type { HttpRequest } from "@/lib/http/model";
 import { interpolate } from "@/lib/http/interpolate";
 import { encodeBody } from "@/lib/http/body-encode";
+import { applyPathParams } from "@/lib/http/path-params";
 
 const BODYLESS_METHODS = new Set(["GET", "DELETE"]);
 
@@ -27,7 +28,12 @@ function appendParams(url: string, params: KeyValue[]): string {
   }
   const [base, existing] = url.split(/\?(.*)/s);
   const search = new URLSearchParams(existing ?? "");
-  params.forEach(({ key, value }) => search.append(key, value));
+  // A key already in the url's own query is the request's mirror of that param, so
+  // skip it - the url value wins and the param is not sent twice (AC-015).
+  const inUrl = new Set(search.keys());
+  params
+    .filter(({ key }) => !inUrl.has(key))
+    .forEach(({ key, value }) => search.append(key, value));
   return `${base}?${search.toString()}`;
 }
 
@@ -56,7 +62,8 @@ export function buildHttpRequest(
   const params: KeyValue[] = Object.entries(effective.params).map(
     ([key, resolved]) => ({ key, value: subst(resolved.value) }),
   );
-  const url = appendParams(subst(node.url), params);
+  const pathResolved = applyPathParams(node.url, node.pathParams ?? {}, subst);
+  const url = appendParams(subst(pathResolved), params);
 
   if (BODYLESS_METHODS.has(node.method)) {
     return {

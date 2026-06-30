@@ -6,19 +6,21 @@ import type { ScriptStage } from "@/lib/scripts/model";
 const linter = new Linter();
 
 // The injected API names that exist in EACH stage, as ESLint readonly globals.
-// `req` is pre-only, `res` post-only; everything else (Promise/JSON/Math/...) is
-// a standard ES global ESLint already knows via ecmaVersion.
+// `req` is injected in BOTH stages (a post script reads the sent request via
+// req.getUrl()/getHeader()), `res` is post-only; everything else
+// (Promise/JSON/Math/...) is a standard ES global ESLint knows via ecmaVersion.
 function globalsFor(stage: ScriptStage): Record<string, "readonly"> {
   // `bru` is the Bruno-compat alias of `requi` (both injected in every stage).
   const shared = {
     requi: "readonly",
     bru: "readonly",
     console: "readonly",
+    req: "readonly",
   } as const;
-  if (stage === "pre") {
-    return { ...shared, req: "readonly" };
+  if (stage === "post") {
+    return { ...shared, res: "readonly" };
   }
-  return { ...shared, res: "readonly" };
+  return shared;
 }
 
 // Semantic linter: flags undefined variables (no-undef) - an undeclared

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   PANE_TABS_LIST,
@@ -12,8 +13,55 @@ import {
   ScriptPanel,
   VarsPanel,
 } from "@/components/workspace/config-panels";
+import { PathParamsPanel } from "@/components/workspace/path-params-panel";
+import type { TokenHighlightContext } from "@/components/workspace/editable-key-value-table";
 import { useWorkspace } from "@/components/workspace/workspace-context";
 import type { RequestNode } from "@/lib/workspace/model";
+
+// The Params tab nests a Path/Query sub-bar. Query edits the request's own
+// `config.params` AND bidirectionally mirrors the URL `?query` (via
+// setRequestQueryParams); Path is the request-only path params. Query is the default
+// so the tab keeps behaving as the single Params tab did.
+function ParamsSubTabs({
+  request,
+  highlight,
+}: {
+  request: RequestNode;
+  highlight: TokenHighlightContext;
+}) {
+  const { setRequestQueryParams } = useWorkspace();
+  const [subTab, setSubTab] = useState<"path" | "query">("query");
+  return (
+    <Tabs
+      value={subTab}
+      onValueChange={(value) => setSubTab(value as typeof subTab)}
+      className="flex h-full flex-col gap-0"
+    >
+      <div className="flex h-10.25 items-stretch overflow-x-auto border-b bg-muted/30">
+        <TabsList aria-label="Param sections" className={PANE_TABS_LIST}>
+          <TabsTrigger value="path" className={PANE_TABS_TRIGGER}>
+            Path
+          </TabsTrigger>
+          <TabsTrigger value="query" className={PANE_TABS_TRIGGER}>
+            Query
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent value="path">
+        <PathParamsPanel request={request} highlight={highlight} />
+      </TabsContent>
+      <TabsContent value="query">
+        <ParamsPanel
+          config={request.config}
+          onChange={(config) =>
+            setRequestQueryParams(request.id, config.params ?? [])
+          }
+          highlight={highlight}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
 
 function RequestTabs({ request }: { request: RequestNode }) {
   const {
@@ -85,12 +133,8 @@ function RequestTabs({ request }: { request: RequestNode }) {
           highlight={highlight}
         />
       </TabsContent>
-      <TabsContent value="params">
-        <ParamsPanel
-          config={request.config}
-          onChange={onConfigChange}
-          highlight={highlight}
-        />
+      <TabsContent value="params" className="min-h-0 flex-1">
+        <ParamsSubTabs request={request} highlight={highlight} />
       </TabsContent>
       <TabsContent value="body" className="min-h-0 flex-1">
         <BodyPanel key={request.id} request={request} />

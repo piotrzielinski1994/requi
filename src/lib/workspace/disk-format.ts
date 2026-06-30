@@ -33,7 +33,27 @@ type ParsedRequest = {
   bodyForm?: KeyValue[];
   config?: ConfigScope;
   order?: number;
+  pathParams?: Record<string, unknown>;
 };
+
+// Keep only string-valued entries; drop the field if the value isn't an object or
+// no valid entry survives. Mirrors sanitizeEnvironmentColors.
+function sanitizePathParams(
+  value: unknown,
+): { pathParams: Record<string, string> } | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const clean = Object.entries(value as Record<string, unknown>).reduce<
+    Record<string, string>
+  >((acc, [name, raw]) => {
+    if (typeof raw === "string") {
+      return { ...acc, [name]: raw };
+    }
+    return acc;
+  }, {});
+  return Object.keys(clean).length > 0 ? { pathParams: clean } : undefined;
+}
 
 // bodyMode/bodyForm only land on disk when non-default (mode !== json or rows
 // present), so a plain JSON request keeps a minimal *.req.json diff.
@@ -173,6 +193,9 @@ function serializeInto(
         url: node.url,
         body: bodyToStored(node.body),
         ...bodyModeFields(node),
+        ...(node.pathParams && Object.keys(node.pathParams).length > 0
+          ? { pathParams: node.pathParams }
+          : {}),
         config: node.config,
         order,
       },
@@ -218,6 +241,7 @@ function parseRequest(
       body: storedToBody(parsed.body),
       ...(parsed.bodyMode ? { bodyMode: parsed.bodyMode } : {}),
       ...(parsed.bodyForm ? { bodyForm: parsed.bodyForm } : {}),
+      ...(sanitizePathParams(parsed.pathParams) ?? {}),
       config: parsed.config ?? {},
     },
   };

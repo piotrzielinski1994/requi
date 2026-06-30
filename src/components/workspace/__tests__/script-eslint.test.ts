@@ -43,11 +43,13 @@ describe("jsUndefLinter", () => {
     expect(jsUndefLinter("post")(view)).toEqual([]);
   });
 
-  it("should not flag req in a pre script but should flag it in a post script", () => {
-    const view = viewOf("req.setUrl('x');");
+  // `req` is injected in BOTH stages (a post script reads the sent request via
+  // req.getUrl()/getHeader()), so neither stage should flag it.
+  it("should not flag req in either a pre or a post script", () => {
+    const view = viewOf("req.getUrl();");
 
     expect(jsUndefLinter("pre")(view)).toEqual([]);
-    expect(jsUndefLinter("post")(view).length).toBeGreaterThan(0);
+    expect(jsUndefLinter("post")(view)).toEqual([]);
   });
 
   it("should not flag res in a post script but should flag it in a pre script", () => {
